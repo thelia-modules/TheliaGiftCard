@@ -1,0 +1,24 @@
+{loop type="currency" name="amount.currency" default_only=1}
+    {$currencySymbol = $SYMBOL}
+{/loop}
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        {intl l="Order Gift-Card amount usage for this order" d="theliagiftcard.bo.default"}
+    </div>
+    <div class="panel-body table-responsive">
+        <ul class="list-unstyled">
+            {$totalSpendAmount = 0}
+            {loop type="gift.card.order.list" name="gift_card_amount_spend_order" order_id=$order_id expired=true}
+                <p>
+                    {$currentSpendAmount = $SPEND_AMOUNT}
+                    {$totalSpendAmount = $totalSpendAmount + $SPEND_AMOUNT}
+                    {loop type="gift.card.list" name="gift_card_list_invoice" backend_context=1 card_id=$GIFTCARD_ID  expired=true}
+                    {intl l="Montant Carte Cadeau %code : <span %class>%amount</span>" class=$class code=$CODE amount={format_money number=$currentSpendAmount symbol=$currencySymbol} d="theliagiftcard"}
+                    {/loop}
+                </p>
+            {/loop}
+            <h3>{intl l="Total payé en carte cadeau"} : {format_money number={$totalSpendAmount} symbol=$orderCurrency|default:null}</h3>
+        </ul>
+    </div>
+</div>

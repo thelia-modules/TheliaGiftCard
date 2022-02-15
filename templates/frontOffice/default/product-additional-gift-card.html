@@ -1,0 +1,45 @@
+<div class="form-gift-card-info" style="clear:both;">
+    {form name="save.gift.card.info"}
+        <form id="form-card_gift" action="{url path="/gift-card/info/save"}" method="post" {form_enctype}>
+            <fieldset><h4>{intl l="Gift Card Informations"}</h4></fieldset>
+            <hr class="mt-0">
+            {form_hidden_fields}
+
+            {if $form_error}<div class="alert alert-danger">{$form_error_message}</div>{/if}
+
+            {form_field field='product_id'}
+                <input type="hidden" name="{$name}" value="{$product_id}" />
+            {/form_field}
+            {form_hidden_fields form=$form}
+
+            <div class="row">
+                {form_field form=$form field="sponsor_name"}
+                    <div class="col-sm-6">
+                        <div class="form-group{if $error} has-error{/if}">
+                            <label class="control-label danger" for="{$label_attr.for}">{intl l=$label}</label>
+                            <input id="{$label_attr.for}" class="form-control" type="text" name="{$name}" value="{$value}">
+                        </div>
+                    </div>
+                {/form_field}
+                {form_field form=$form field="beneficiary_name"}
+                    <div class="col-sm-6">
+                        <div class="form-group{if $error} has-error{/if}">
+                            <label class="control-label danger" for="{$label_attr.for}">{intl l=$label}</label>
+                            <input id="{$label_attr.for}" class="form-control" type="text" name="{$name}" value="{$value}">
+                        </div>
+                    </div>
+                {/form_field}
+            </div>
+            {form_field form=$form field="beneficiary_message"}
+                <div class="form-group{if $error} has-error{/if}">
+                    <label class="control-label danger" for="{$label_attr.for}">{intl l=$label}</label>
+                    <textarea id="{$label_attr.for}" class="form-control" type="text" name="{$name}" value="{$value}"></textarea>
+                </div>
+            {/form_field}
+
+            <div class="mt-5">
+                <button type="submit" class="btn btn-default">{intl l="Add to cart" d="theliagiftcard.fo.default"}</button>
+            </div>
+        </form>
+    {/form}
+</div>

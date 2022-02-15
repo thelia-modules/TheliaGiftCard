@@ -1,0 +1,12 @@
+{
+  "name": "your-vendor/thelia-gift-card-module",
+  "license": "LGPL-3.0+",
+  "type": "thelia-module",
+  "require": {
+    "thelia/installer": "~1.1",
+    "zircote/swagger-php": "~3.0.0"
+  },
+  "extra": {
+    "installer-name": "TheliaGiftCard"
+  }
+}

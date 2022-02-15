@@ -1,0 +1,43 @@
+{if {wasGiftCardInCart} == false}
+<table class="table table-cart table-bordered table-cart-total">
+        {ifloop rel="customer.card.gift"}
+        <tr><th>{intl l="Gift Card" d="theliagiftcard.fo.default"}</th></tr>
+        <tr>
+            <td>
+                {form name="consume.gift.card"}
+                <form id="form-card_gift" action="{url path="/gift-card/spend"}" method="post" {form_enctype}>
+                {form_hidden_fields}
+
+                {form_field field='success_url'}
+                    <input type="hidden" name="{$name}" value="{url path='/order/invoice'}" />
+                {/form_field}
+
+                {if $form_error}<div class="alert alert-danger">{$form_error_message}</div>{/if}
+
+                {form_field field='gift_card_code'}
+                <label class="control-label" for="{$label_attr.for}">{intl l=$label d="theliagiftcard.fo.default"}</label>
+                <select class="form-control" name="{$name}[]" required>
+                    <option value="" disabled selected>{intl l="Select your Gift Card" d="theliagiftcard.fo.default"}</option>
+                    {loop type="gift.card.list" name="customer.card.gift" customer=current expire=false current_cart=true}
+                        {$USED_AMOUNT}+{$CART_SPEND_AMOUNT}
+                    <option value="{$CODE}">{if $PRODUCT_NAME}{$PRODUCT_NAME}{else}{intl l='Gift Card' d="theliagiftcard.fo.default"}{/if} : {format_money number=$USED_AMOUNT+$CART_SPEND_AMOUNT currency_id=$CURRENCY} / {format_money number=$AMOUNT currency_id=$CURRENCY}</option>
+                    {/loop}
+                </select>
+                {/form_field}
+
+                {form_field field='amount_used'}
+                    <label class="control-label sr-only" for="spend_amount_card_gift">{intl l='Amount to spend :' d="theliagiftcard.fo.default"}</label>
+                    <input id="spend_amount_card_gift" class="form-control" type="number" name="{$name}" value="{$value}" placeholder="{intl l='Use Card gift amount' d="theliagiftcard.fo.default"}" required>
+                {/form_field}
+
+                <span class="input-group-btn">
+                    <button type="submit" class="btn btn-default">{intl l="Ok" d="theliagiftcard.fo.default"}</button>
+                </span>
+
+                </form>
+                {/form}
+            </td>
+        </tr>
+        {/ifloop}
+    </table>
+{/if}

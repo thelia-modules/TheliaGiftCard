@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database defaultIdMethod="native" name="TheliaMain"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:noNamespaceSchemaLocation="../../../vendor/propel/propel/resources/xsd/database.xsd" >
+
+    <table name="gift_card" namespace="TheliaGiftCard\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER" />
+
+        <column name="sponsor_customer_id" required="false" type="INTEGER" defaultValue="null" />
+        <column name="beneficiary_customer_id" required="false" type="INTEGER" defaultValue="null" />
+        <column name="order_id" required="false" type="INTEGER" defaultValue="null" />
+        <column name="product_id" required="false" type="INTEGER" defaultValue="null"/>
+        <column name="code" required="true" size="100" type="VARCHAR" />
+        <column name="amount" scale="6" size="16" type="DECIMAL" />
+        <column name="spend_amount" scale="6" size="16" type="DECIMAL" />
+        <column name="status"  size="1" type="INTEGER" />
+
+        <column name="expiration_date" type="DATE" required="true"/>
+
+        <foreign-key foreignTable="customer" name="fk_card_gift_sponsor_customer" onDelete="CASCADE" onUpdate="CASCADE">
+            <reference foreign="id" local="sponsor_customer_id" />
+        </foreign-key>
+
+        <foreign-key foreignTable="customer" name="fk_card_gift_beneficiary_customer" onDelete="CASCADE" onUpdate="CASCADE">
+            <reference foreign="id" local="beneficiary_customer_id" />
+        </foreign-key>
+
+        <foreign-key foreignTable="order" name="fk_gift_card_order" onDelete="CASCADE" onUpdate="CASCADE">
+            <reference foreign="id" local="order_id" />
+        </foreign-key>
+
+        <foreign-key foreignTable="product" name="fk_gift_card_product" onDelete="RESTRICT" onUpdate="RESTRICT">
+            <reference foreign="id" local="product_id" />
+        </foreign-key>
+
+        <behavior name="timestampable" />
+    </table>
+
+    <table name="gift_card_info_cart" namespace="TheliaGiftCard\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER" />
+        <column name="order_product_id" type="INTEGER"/>
+        <column name="gift_card_id" type="INTEGER" />
+        <column name="cart_id" type="INTEGER" required="false"/>
+        <column name="cart_item_id" type="INTEGER" required="false"/>
+        <column name="sponsor_name" size="250" type="VARCHAR" />
+        <column name="beneficiary_name" size="250" type="VARCHAR" />
+        <column name="beneficiary_message" size="500" type="VARCHAR" />
+
+        <foreign-key foreignTable="cart" name="fk_gift_card_info_cart" onDelete="CASCADE" onUpdate="CASCADE">
+            <reference foreign="id" local="cart_id" />
+        </foreign-key>
+
+        <foreign-key foreignTable="cart_item" name="fk_gift_card_info_cart_item" onDelete="CASCADE" onUpdate="CASCADE">
+            <reference foreign="id" local="cart_item_id" />
+        </foreign-key>
+    </table>
+
+    <table name="gift_card_cart" namespace="TheliaGiftCard\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER" />
+
+        <column name="gift_card_id" type="INTEGER" />
+        <column name="cart_id" required="true" type="INTEGER" />
+        <column name="cart_item_id" required="true" type="INTEGER" />
+        <column name="spend_amount" scale="6" size="16" type="DECIMAL" />
+
+        <foreign-key foreignTable="cart" name="fk_cart_gift_card" onDelete="CASCADE" onUpdate="CASCADE">
+            <reference foreign="id" local="cart_id" />
+        </foreign-key>
+
+        <foreign-key foreignTable="cart_item" name="fk_cart_item_gift_card" onDelete="CASCADE" onUpdate="CASCADE">
+            <reference foreign="id" local="cart_item_id" />
+        </foreign-key>
+
+        <foreign-key foreignTable="gift_card" name="fk_card_gift_cart_cg" onDelete="CASCADE" onUpdate="CASCADE">
+            <reference foreign="id" local="gift_card_id" />
+        </foreign-key>
+
+        <behavior name="timestampable" />
+    </table>
+
+    <table name="gift_card_order" namespace="TheliaGiftCard\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER" />
+
+        <column name="gift_card_id" required="true" type="INTEGER" />
+        <column name="order_id" required="true" type="INTEGER" />
+        <column name="spend_amount" scale="6" size="16" type="DECIMAL" />
+        <column name="initial_postage" scale="6" size="16" type="DECIMAL" />
+        <column name="status" size="1" default="0" type="INTEGER" />
+
+        <foreign-key foreignTable="order" name="fk_card_gift_order" onDelete="CASCADE" onUpdate="RESTRICT">
+            <reference foreign="id" local="order_id" />
+        </foreign-key>
+
+        <foreign-key foreignTable="gift_card" name="fk_card_gift_order_cg" onDelete="CASCADE" onUpdate="RESTRICT">
+            <reference foreign="id" local="gift_card_id" />
+        </foreign-key>
+
+        <index name="idx_gift_card_id">
+            <index-column name="gift_card_id" />
+        </index>
+
+        <index name="idx_gift_card_order_id">
+            <index-column name="order_id" />
+        </index>
+
+        <behavior name="timestampable" />
+    </table>
+
+    <table name="gift_card_email_status" namespace="TheliaGiftCard\Model">
+        <column autoIncrement="true" name="id" primaryKey="true" required="true" type="INTEGER" />
+
+        <column name="status_id" required="false" type="INTEGER" />
+        <column name="special_status" required="false" type="VARCHAR" />
+        <column name="email_subject" required="true" type="VARCHAR" />
+        <column name="email_text" required="true" type="LONGVARCHAR" />
+
+        <foreign-key foreignTable="order_status" name="fk_gift_card_email_order_status_id" onDelete="RESTRICT" onUpdate="RESTRICT">
+            <reference foreign="id" local="status_id" />
+        </foreign-key>
+    </table>
+
+    <external-schema filename="local/config/schema.xml" referenceOnly="true" />
+</database>

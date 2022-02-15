@@ -1,0 +1,19 @@
+{extends file="email-layout.tpl"}
+
+{* Open in browser  *}
+{block name="browser"}{/block}
+
+{* Subject  *}
+{block name="email-subject"}{$emailSubject nofilter}{/block}
+
+{* Title  *}
+{block name="email-title"}{$emailSubject nofilter}{/block}
+
+{* Content  *}
+{block name="email-content"}
+{strip}
+<div>
+    {$emailText nofilter}
+</div>
+{/strip}
+{/block}

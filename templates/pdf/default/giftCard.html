@@ -1,0 +1,215 @@
+{* Set the default translation domain, that will be used by {intl} when the 'd' parameter is not set *}
+{default_translation_domain domain='pdf.default'}
+{default_locale locale=$default_locale}
+{literal}
+<style>
+    body {
+
+    }
+    *, *:before *:after {
+        box-sizing: border-box;
+    }
+    h1, h2, h3, h4 {
+        margin: .5em 0;
+    }
+
+    h1 {
+        font-size: 48px;
+    }
+
+    h2 {
+        font-size: 16px;
+    }
+
+    h3 {
+        font-size: 14px;
+    }
+
+    h4 {
+        font-size: 12px;
+    }
+
+    p {
+        margin: .5em 0;
+    }
+
+    span {
+        font-size: 9px;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    tr {
+        width: 100%;
+    }
+
+    td {
+        vertical-align: top;
+    }
+
+
+    .align-left {
+        text-align: left;
+    }
+    .align-center {
+        text-align: center;
+    }
+    .align-right{
+        text-align: right;
+    }
+
+    .clear {
+        padding: 0.5%;
+        border-bottom:solid 1px #dddddd;
+    }
+
+    .clear-none {
+        padding: 0.5%;
+    }
+
+    .gift-background {
+
+    }
+    .gift-background img{
+        max-width: 100%;
+        width: 100%;
+        height: auto;
+    }
+    .gift-code {
+        background-color: #f2f2f2;
+        min-height: 50mm;
+        padding: 5mm 0 10mm;
+
+    }
+    .gift-from-to {
+        background-color: #e6e6e6;
+        min-height: 33mm;
+        padding-top: 10mm;
+        padding-bottom: 10mm;
+        font-size: 8pt;
+    }
+    .gift-code-amount {
+        text-align: center;
+        font-size: 34pt;
+        margin-bottom: 2mm;
+        margin-right: -9mm;
+    }
+    .gift-code-ornament {
+        text-align: center;
+    }
+    .gift-code-code {
+        margin-top: 1.5mm;
+    }
+    .gift-code-code-label {
+        text-align: center;
+        font-size: 9pt;
+    }
+    .gift-code-code-id {
+        text-align: center;
+        font-weight: bold;
+        margin-top: 2mm;
+    }
+    .gift-code-code-infos {
+        font-size: 7pt;
+        margin-top: 8mm;
+    }
+    .gift-code-code-infos  div {
+        text-align: center;
+    }
+    .gift-legal {
+        margin-top: 4mm;
+    }
+    .gift-legal h4 {
+        margin-bottom: 0;
+    }
+    .gift-legal p {
+        font-size: 7pt;
+    }
+
+
+</style>
+{/literal}
+<page backtop="8mm" backleft="8mm" backright="8mm" backbottom="5.5mm">
+
+    <div class="gift-background" >
+    </div>
+    <div class="gift-code">
+        <div class="gift-code-amount">
+            {$AMOUNT|number_format:2} <sup>€</sup>
+        </div>
+        <div class="gift-code-ornament">
+        </div>
+        <div class="gift-code-code">
+            <div class="gift-code-code-label">{intl l="Gift Card activation code" d='thlieagiftcard.fo.default'}</div>
+            <div class="gift-code-code-id">{$code}</div>
+            <table class="gift-code-code-infos">
+                    <col style="width: 20%;" />
+                    <col style="width: 60%;" />
+                    <col style="width: 20%;" />
+                <tbody>
+                    <tr>
+                        <td></td>
+                        <td>
+                                <div>
+                                     {intl l='In order to enable your gift card, go to your customer area (or create an account if you don\'t already have one) and copy the following code into the section provided.' d="theliagiftcard.fo.default"}
+                                     {intl l='The amount of the card may be used repeatedly as needed until the end period or until used up.' d="theliagiftcard.fo.default"}
+                                     {intl l='The amount you want to use is decided when finalizing your cart.' d="theliagiftcard.fo.default"}
+                                </div>
+                        </td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+    <div class="gift-from-to">
+        <table>
+            <col style="width: 10%;" />
+            <col style="width: 80%;" />
+            <col style="width: 10%;" />
+            <tr>
+                <td></td>
+                <td>
+                    <table>
+                        <col style="width: 50%;" />
+                        <col style="width: 50%;" />
+                        {if $SNAME || $BNAME}
+                            <tr>
+                                {if $SNAME }
+                                <td>
+                                    {intl l="de"}: {$SNAME}
+                                </td>
+                                {/if}
+                                {if $BNAME}
+                                <td>
+                                    {intl l="pour"}: {$BNAME}
+                                </td>
+                                {/if}
+                            </tr>
+                        {/if}
+                        {if $message}
+                            <tr>
+                                <td colspan="2" style="padding-top: 2mm;">
+                                    <p>{$message nofilter}</p>
+                                </td>
+                            </tr>
+                        {/if}
+                    </table>
+                </td>
+                <td></td>
+            </tr>
+        </table>
+
+    </div>
+    <div class="gift-legal">
+        <h4>{intl l="Terms of use" d="theliagiftcard.fo.default"}</h4>
+        <p>{intl l='This card is available during 12 months when activated. This card can not be exchanged or extended.' d="theliagiftcard.fo.default"}</p>
+        <p>
+            <strong></strong>
+        </p>
+    </div>
+</page>
