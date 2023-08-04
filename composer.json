@@ -1,5 +1,5 @@
 {
-  "name": "your-vendor/thelia-gift-card-module",
+  "name": "thelia/thelia-gift-card-module",
   "license": "LGPL-3.0+",
   "type": "thelia-module",
   "require": {
