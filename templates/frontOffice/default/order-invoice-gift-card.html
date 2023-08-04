@@ -1,10 +1,11 @@
 {if {wasGiftCardInCart} == false}
+
 <table class="table table-cart table-bordered table-cart-total">
         {ifloop rel="customer.card.gift"}
         <tr><th>{intl l="Gift Card" d="theliagiftcard.fo.default"}</th></tr>
         <tr>
             <td>
-                {form name="consume.gift.card"}
+                {form name="consume_gift_card"}
                 <form id="form-card_gift" action="{url path="/gift-card/spend"}" method="post" {form_enctype}>
                 {form_hidden_fields}
 
@@ -20,7 +21,7 @@
                     <option value="" disabled selected>{intl l="Select your Gift Card" d="theliagiftcard.fo.default"}</option>
                     {loop type="gift.card.list" name="customer.card.gift" customer=current expire=false current_cart=true}
                         {$USED_AMOUNT}+{$CART_SPEND_AMOUNT}
-                    <option value="{$CODE}">{if $PRODUCT_NAME}{$PRODUCT_NAME}{else}{intl l='Gift Card' d="theliagiftcard.fo.default"}{/if} : {format_money number=$USED_AMOUNT+$CART_SPEND_AMOUNT currency_id=$CURRENCY} / {format_money number=$AMOUNT currency_id=$CURRENCY}</option>
+                    <option value="{$CODE}">{if $PRODUCT_NAME}{$PRODUCT_NAME}{else}{intl l='Gift Card' d="theliagiftcard.fo.default"}{/if} : {format_money number=$USED_AMOUNT+$CART_SPEND_AMOUNT currency_id=$CURRENCY|default:1} / {format_money number=$AMOUNT currency_id=$CURRENCY|default:1}</option>
                     {/loop}
                 </select>
                 {/form_field}

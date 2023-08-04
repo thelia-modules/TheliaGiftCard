@@ -1,0 +1,3 @@
+SET FOREIGN_KEY_CHECKS = 0;
+ALTER TABLE gift_card_info_cart ADD beneficiary_email VARCHAR(255) NULL;
+SET FOREIGN_KEY_CHECKS = 1;

@@ -1,13 +1,8 @@
 <?php
-/*************************************************************************************/
-/*      Copyright (c) BERTRAND TOURLONIAS                                            */
-/*      email : btourlonias@openstudio.fr                                            */
-/*************************************************************************************/
 
 namespace TheliaGiftCard\Smarty\Plugins;
 
-use Thelia\Model\Base\AddressQuery;
-use Thelia\Model\ProductQuery;
+use Symfony\Component\HttpFoundation\RequestStack;
 use TheliaGiftCard\Model\GiftCardCartQuery;
 use TheliaGiftCard\Model\GiftCardInfoCartQuery;
 use TheliaGiftCard\Model\GiftCardQuery;
@@ -15,26 +10,29 @@ use TheliaGiftCard\Service\GiftCardService;
 use TheliaGiftCard\TheliaGiftCard;
 use TheliaSmarty\Template\AbstractSmartyPlugin;
 use TheliaSmarty\Template\SmartyPluginDescriptor;
-use Thelia\Core\HttpFoundation\Request;
+
+/**
+ * A DELETE, utiliser uniquement la partie API ou loop
+ */
 
 class GiftCardSmartyPlugin extends AbstractSmartyPlugin
 {
     /**
-     * @var Request
+     * @var RequestStack
      */
-    private $request;
+    private RequestStack $requestStack;
     /**
      * @var GiftCardService
      */
-    private $giftCardService;
+    private GiftCardService $giftCardService;
 
-    public function __construct(Request $request, GiftCardService $giftCardService)
+    public function __construct(RequestStack $requestStack, GiftCardService $giftCardService)
     {
-        $this->request = $request;
+        $this->requestStack = $requestStack;
         $this->giftCardService = $giftCardService;
     }
 
-    public function getPluginDescriptors()
+    public function getPluginDescriptors(): array
     {
         return array(
             new SmartyPluginDescriptor('function', 'getGitCardInfo', $this, 'getGitCardInfo'),
@@ -49,22 +47,22 @@ class GiftCardSmartyPlugin extends AbstractSmartyPlugin
         );
     }
 
-    public function getCartTotalHTWhitoutGiftCart($params, $smarty)
+    public function getCartTotalHTWhitoutGiftCart(): float|int
     {
-        $cart = $this->request->getSession()->getSessionCart();
+        $cart = $this->requestStack->getCurrentRequest()->getSession()->getSessionCart();
         $total = 0;
 
         if (null != $cart) {
             foreach ($cart->getCartItems() as $cartItem) {
                 $product = $cartItem->getProduct();
-                if($product->getRef() === TheliaGiftCard::GIFT_CARD_CART_PRODUCT_REF){
+                if ($product->getRef() === TheliaGiftCard::GIFT_CARD_CART_PRODUCT_REF) {
                     continue;
                 }
 
                 if ($cartItem->getPromo()) {
                     $total += $cartItem->getPromoPrice() * $cartItem->getQuantity();
-                } else{
-                    $total += $cartItem->getPrice()  * $cartItem->getQuantity();
+                } else {
+                    $total += $cartItem->getPrice() * $cartItem->getQuantity();
                 }
             }
         }
@@ -73,19 +71,20 @@ class GiftCardSmartyPlugin extends AbstractSmartyPlugin
 
     }
 
-    public function getGitCardInfo($params, $smarty)
+    public function getGitCardInfo($params, $smarty): void
     {
         //Récupération des informations liées à l'achat d'une carte cadeau (bénéficiare, message ...)
 
-        $cartItemId = $params['cart_item_id'];
-        $code = $params['code'];
+        $cartItemId = $params['cart_item_id'] ?? null;
+        $code = $params['code'] ?? null;
+        $infoGiftCard = null;
 
         $smarty->assign(['sponsor_name' => ""]);
         $smarty->assign(['beneficiary_name' => ""]);
         $smarty->assign(['beneficiary_message' => ""]);
 
         if ($cartItemId) {
-            $cart = $this->request->getSession()->getSessionCart();
+            $cart = $this->requestStack->getCurrentRequest()->getSession()->getSessionCart();
 
             $infoGiftCard = GiftCardInfoCartQuery::create()
                 ->filterByCartId($cart->getId())
@@ -110,7 +109,7 @@ class GiftCardSmartyPlugin extends AbstractSmartyPlugin
         }
     }
 
-    public function isGiftCardProduct($params)
+    public function isGiftCardProduct($params): bool
     {
         $productId = $params['product_id'];
         $tabProductGiftCard = TheliaGiftCard::getGiftCardProductList();
@@ -122,9 +121,9 @@ class GiftCardSmartyPlugin extends AbstractSmartyPlugin
         return false;
     }
 
-    public function wasGiftCardInCart($params, $smarty)
+    public function wasGiftCardInCart(): bool
     {
-        $cart = $this->request->getSession()->getSessionCart();
+        $cart = $this->requestStack->getCurrentRequest()->getSession()->getSessionCart();
         if (null != $cart) {
             foreach ($cart->getCartItems() as $cartItem) {
                 $currentProduct = $cartItem->getProduct();
@@ -138,9 +137,9 @@ class GiftCardSmartyPlugin extends AbstractSmartyPlugin
         return false;
     }
 
-    public function getGiftCardCartAmount($params, $smarty)
+    public function getGiftCardCartAmount($smarty): int|string|null
     {
-        $cart = $this->request->getSession()->getSessionCart();
+        $cart = $this->requestStack->getCurrentRequest()->getSession()->getSessionCart();
         $total = 0;
 
         $giftCardsCart = GiftCardCartQuery::create()
@@ -156,22 +155,22 @@ class GiftCardSmartyPlugin extends AbstractSmartyPlugin
         return $total;
     }
 
-    public function resetGiftCardOncart($params, $smarty)
+    public function resetGiftCardOncart(): void
     {
-        if ($this->request->hasSession()) {
+        if ($this->requestStack->getCurrentRequest()->hasSession()) {
             $this->giftCardService->reset();
         }
     }
 
-    public function getOrderSessionPostage($params, $smarty)
+    public function getOrderSessionPostage($smarty): void
     {
-        if ($this->request->hasSession()) {
-            $postage = $this->request->getSession()->get(TheliaGiftCard::GIFT_CARD_SESSION_POSTAGE);
+        if ($this->requestStack->getCurrentRequest()->hasSession()) {
+            $postage = $this->requestStack->getCurrentRequest()->getSession()->get(TheliaGiftCard::GIFT_CARD_SESSION_POSTAGE);
             $smarty->assign(['realPostageGiftCard' => $postage]);
         }
     }
 
-    public function getGiftCardCategoryId()
+    public function getGiftCardCategoryId(): int
     {
         return TheliaGiftCard::getGiftCardCategoryId();
     }

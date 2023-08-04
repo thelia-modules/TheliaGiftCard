@@ -8,7 +8,7 @@
     </div>
     <div id="account-gift-card">
         <div class="panel-body table-responsive">
-            {form name="activate.gift.card.to.customer"}
+            {form name="activate_gift_card_to_customer"}
                 <form action="{url path='/gift-card/activate-code'}" method="post">
                     {form_field field='success_url'}
                         <input type="hidden" name="{$name}" value="{url path="/account"}"/>

@@ -2,17 +2,19 @@
 
 namespace TheliaGiftCard\Controller\Api;
 
+use Exception;
 use OpenApi\Annotations as OA;
+use Symfony\Component\Routing\Annotation\Route;
 
 use OpenApi\Controller\Front\BaseFrontOpenApiController;
 use Propel\Runtime\ActiveQuery\Criteria;
 
 use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Thelia\Core\HttpFoundation\Request;
+use Thelia\Core\HttpFoundation\Response;
 use Thelia\Core\Translation\Translator;
 use TheliaGiftCard\Model\GiftCardQuery;
-use TheliaGiftCard\TheliaGiftCard as MainClassTheliaGiftCard;
-use Symfony\Component\Routing\Annotation\Route;
+use TheliaGiftCard\TheliaGiftCard;
 
 /**
  * Class GiftCardActivateApiController
@@ -57,10 +59,11 @@ class GiftCardActivateApiController extends BaseFrontOpenApiController
      *     )
      * )
      * )
+     * @throws Exception
      */
-    public function activate(Request $request)
+    public function activate(Request $request): Response
     {
-        $form = $this->createForm('activate.gift.card.to.customer',FormType::class, [], ['csrf_protection' => false]);
+        $form = $this->createForm('activate_gift_card_to_customer', FormType::class, [], ['csrf_protection' => false]);
 
         $codeForm = $this->validateForm($form);
         $code = $codeForm->get('code_gift_card')->getData();
@@ -71,7 +74,7 @@ class GiftCardActivateApiController extends BaseFrontOpenApiController
             ->findOne();
 
         if (null === $giftCard) {
-            throw new \Exception(Translator::getInstance()->trans("Code incorrecte ou non activable"));
+            throw new Exception(Translator::getInstance()->trans("Code incorrecte ou non activable", [], TheliaGiftCard::DOMAIN_NAME));
         }
 
         $currentCustomerId = $request->getSession()->getCustomerUser();
@@ -81,7 +84,7 @@ class GiftCardActivateApiController extends BaseFrontOpenApiController
             ->save();
 
         return $this->jsonResponse(
-            json_encode(Translator::getInstance()->trans("Activation carte cadeau reussie",[MainClassTheliaGiftCard::DOMAIN_NAME]))
+            json_encode(Translator::getInstance()->trans("Activation carte cadeau reussie", [], TheliaGiftCard::DOMAIN_NAME))
         );
     }
 }

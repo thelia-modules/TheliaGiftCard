@@ -6,6 +6,8 @@
 
 namespace TheliaGiftCard\Loop;
 
+use DateTime;
+use PDO;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\ActiveQuery\Join;
 use Thelia\Core\Template\Element\BaseLoop;
@@ -14,7 +16,6 @@ use Thelia\Core\Template\Element\LoopResultRow;
 use Thelia\Core\Template\Element\PropelSearchLoopInterface;
 use Thelia\Core\Template\Loop\Argument\Argument;
 use Thelia\Core\Template\Loop\Argument\ArgumentCollection;
-use Thelia\Model\Map\CartItemTableMap;
 use Thelia\Model\Map\ProductI18nTableMap;
 use Thelia\Type\TypeCollection;
 use TheliaGiftCard\Model\GiftCard;
@@ -25,10 +26,10 @@ use TheliaGiftCard\Model\Map\GiftCardTableMap;
 
 class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
 {
-    protected function getArgDefinitions()
+    protected function getArgDefinitions(): ArgumentCollection
     {
         return new ArgumentCollection(
-            Argument::createIntTypeArgument('card_id', null),
+            Argument::createIntTypeArgument('card_id'),
             new Argument(
                 'customer',
                 new TypeCollection(
@@ -73,7 +74,7 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
         $locale = $this->getCurrentRequest()->getSession()->getLang()->getLocale();
 
         $search = GiftCardQuery::create()
-            ->useProductQuery('', Criteria::LEFT_JOIN)
+            ->useProductQuery('')
             ->useProductI18nQuery('', Criteria::LEFT_JOIN)
             ->filterByLocale($locale)
             ->_or()
@@ -94,11 +95,11 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
             $search->filterByBeneficiaryCustomerId($customer, Criteria::EQUAL);
         }
 
-        if (false == $expired) {
-            $search->where(GiftCardTableMap::SPEND_AMOUNT . ' < ' . GiftCardTableMap::AMOUNT);
+        if (!$expired) {
+            $search->where(GiftCardTableMap::COL_SPEND_AMOUNT . ' < ' . GiftCardTableMap::COL_AMOUNT);
         }
 
-        if (false == $desactivate) {
+        if (!$desactivate) {
             $search->filterByStatus(1);
         }
 
@@ -110,7 +111,7 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
             return null;
         }
 
-        $search->groupby(GiftCardTableMap::ID);
+        $search->groupby(GiftCardTableMap::COL_ID);
 
         if ($currentCart) {
             $cart = $this->getCurrentRequest()->getSession()->getSessionCart();
@@ -132,8 +133,8 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
 
             $search
                 ->addJoinObject($giftCardCartJoin, 'cart_join')
-                ->addJoinCondition('cart_join', GiftCardCartTableMap::CART_ID.' = ?', $cart->getId(), Criteria::EQUAL, \PDO::PARAM_INT)
-                ->withColumn("SUM(" . GiftCardCartTableMap::SPEND_AMOUNT . ")", 'CART_SPEND_AMOUNT');
+                ->addJoinCondition('cart_join', GiftCardCartTableMap::COL_CART_ID . ' = ?', $cart->getId(), Criteria::EQUAL, PDO::PARAM_INT)
+                ->withColumn("SUM(" . GiftCardCartTableMap::COL_SPEND_AMOUNT . ")", 'CART_SPEND_AMOUNT');
         }
 
         return $search;
@@ -141,7 +142,7 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
 
     public function parseResults(LoopResult $loopResult)
     {
-        $dateNow = new \DateTime();
+        $dateNow = new DateTime();
 
         /** @var GiftCard $giftCard */
         foreach ($loopResult->getResultDataCollection() as $giftCard) {
@@ -159,8 +160,12 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
                 ->set('EXPIRATION_DATE', $giftCard->getExpirationDate('d/m/Y'))
                 ->set('CREATE_AT', $giftCard->getCreatedAt('d/m/Y'));
 
+            $delta = null;
+            
             //Si date d'expiration inférieure à la date du jour
-            $delta = $dateNow->diff($giftCard->getExpirationDate())->format('%r');
+            if ($giftCard->getExpirationDate()) {
+                $delta = $dateNow->diff($giftCard->getExpirationDate())->format('%r');
+            }
 
             $loopResultRow->set('EXPIRED', 0);
 
@@ -176,7 +181,7 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
             if ($giftCard->getAmount() <= $giftCard->getSpendAmount() || null != $delta) {
                 $loopResultRow->set('EXPIRED', 1);
 
-                if (false == $this->getExpired()) {
+                if (!$this->getExpired()) {
                     continue;
                 }
 

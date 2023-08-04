@@ -1,0 +1,42 @@
+{form name="gift_card_customer_email"}
+    {capture "send_gift_card_email"}
+        <div class="row">
+            {form_hidden_fields}
+
+            {form_field form=$form field='gift_card_code'}
+                <input id="giftCardCode" type="hidden" name="{$name}" value=""/>
+            {/form_field}
+
+            {form_field form=$form field='success_url'}
+                <input type="hidden" name="{$name}" value="{url path={navigate to="current"}}"/>
+            {/form_field}
+
+            {form_field form=$form field='error_url'}
+                <input type="hidden" name="{$name}" value="{url path={navigate to="current"}}"/>
+            {/form_field}
+
+            <div class="col-md-12">
+                {render_form_field field='to'}
+            </div>
+            <div class="col-md-12">
+                {render_form_field field='email_subject' value={$value|default:{intl l="Votre carte cadeau au format numérique." d="theliagiftcard.bo.default"}}}
+            </div>
+            <div class="col-md-12">
+                {render_form_field field='email_text' value={$value|default:{include file="include/beneficiary-email-content-default.html"} nofilter} extra_class="wysiwyg sr-only"}
+            </div>
+        </div>
+    {/capture}
+    {include
+        file = "includes/generic-create-dialog.html"
+
+        dialog_id    = "send_gift_card_email"
+        dialog_title = {intl l="Send gift card by email" d='theliagiftcard.bo.default'}
+        dialog_body  = {$smarty.capture.send_gift_card_email nofilter}
+
+        dialog_ok_label     = {intl l="Save" d='theliagiftcard.bo.default'}
+        dialog_cancel_label = {intl l="Cancel" d='theliagiftcard.bo.default'}
+
+        form_action        = {url path="/admin/module/theliagiftcard/giftcard/send"}
+        form_enctype       = {form_enctype}
+    }
+{/form}

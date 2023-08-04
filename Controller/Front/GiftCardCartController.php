@@ -6,7 +6,10 @@
 
 namespace TheliaGiftCard\Controller\Front;
 
+use Exception;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Thelia\Controller\Front\BaseFrontController;
 use Thelia\Core\Event\Cart\CartEvent;
@@ -17,16 +20,16 @@ use Symfony\Component\Routing\Annotation\Route;
 
 /**
  * Class GiftCardController
- * @Route("/gift-card/info", name="gift_card_info")
+ * @Route("/gift-card/cart", name="buy_gift_card")
  */
 class GiftCardCartController extends BaseFrontController
 {
     /**
-     * @Route("/save", name="save_info") 
+     * @Route("/add", name="buy_gift_card_to_cart")
      */
-    public function saveInfoAction(Session $session, EventDispatcherInterface $dispatcher)
+    public function saveInfoAction(Session $session, EventDispatcherInterface $dispatcher): RedirectResponse|Response
     {
-        $form = $this->createForm('save.gift.card.info');
+        $form = $this->createForm('save_gift_card_info');
 
         try {
             $this->validateForm($form);
@@ -37,7 +40,9 @@ class GiftCardCartController extends BaseFrontController
             $product_id = $form->getForm()->get('product_id')->getData();
             $sponsorName = $form->getForm()->get('sponsor_name')->getData();
             $beneficiaryName = $form->getForm()->get('beneficiary_name')->getData();
+            $beneficiaryAddress = $form->getForm()->get('beneficiary_address')->getData();
             $beneficiaryMessage = $form->getForm()->get('beneficiary_message')->getData();
+            $beneficiaryEmail = $form->getForm()->get('beneficiary_email')->getData();
 
             if ($product_id) {
                 $cartEvent->setQuantity(1);
@@ -69,13 +74,25 @@ class GiftCardCartController extends BaseFrontController
                     $infoGiftCard->setBeneficiaryMessage($beneficiaryMessage);
                 }
 
+                if ($beneficiaryAddress) {
+                    $infoGiftCard->setBeneficiaryAddress($beneficiaryAddress);
+                }
+
+                if ($beneficiaryEmail) {
+                    $infoGiftCard->setBeneficiaryEmail($beneficiaryEmail);
+                }
+
                 $infoGiftCard->save();
             }
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return $this->generateRedirectFromRoute('cart.view', ['error_custom' => $e]);
         }
 
-        return $this->generateRedirectFromRoute('cart.view');
+        return $this->generateRedirectFromRoute('cart.view', [
+            'product_id' => 1002
+        ], [
+            'product_id' => 1002
+        ]);
     }
 }

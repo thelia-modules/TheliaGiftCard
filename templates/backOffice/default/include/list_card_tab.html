@@ -1,15 +1,18 @@
 <div class="row general-block-decorator">
   <div style="margin-bottom: 2em;" class="title title-without-tabs">
     {intl l="Gift Card List" d="theliagiftcard.bo.default"}
+    <a class="btn btn-default pull-right" title="{intl l='Configuration' d='theliagiftcard.bo.default'}" href="#config_card_gift_dialog" data-toggle="modal">
+        <span class="glyphicon glyphicon-cog"></span>
+    </a>
     <a class="btn btn-primary pull-right" title="{intl l='Create a new gift card' d='theliagiftcard.bo.default'}" href="#manualy_create_card_gift_dialog" data-toggle="modal">
-        <span class="glyphicon glyphicon-plus"></span>
+      <span class="glyphicon glyphicon-plus"></span>
     </a>
   </div>
   <div class="row">
     <div class="col-md-2 filter">
       <div class="form-group">
         <label for="js-input-type" class="control-label">
-          Filtrer par type :
+          {intl l='Filtrer par type :' d='theliagiftcard.bo.default'}
         </label>
 
         <select id="js-input-type" class="form-control js-refresh-table" data-default="">

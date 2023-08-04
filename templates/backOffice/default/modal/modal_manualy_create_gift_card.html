@@ -1,4 +1,4 @@
-{form name="manualy.create.card.gift"}
+{form name="manualy_create_gift_card"}
 {capture "manualy_create_card_gift_dialog"}
     <fieldset><h4>{intl l="Gift Card Informations"}</h4></fieldset>
 
@@ -24,6 +24,16 @@
                 <div class="form-group{if $error} has-error{/if}">
                     <label class="control-label danger" for="{$label_attr.for}">{intl l=$label}</label>
                     <input id="{$label_attr.for}" class="form-control" type="text" name="{$name}" value="{$value}">
+                </div>
+            </div>
+        {/form_field}
+    </div>
+    <div class="row">
+        {form_field form=$form field="beneficiary_address"}
+            <div class="col-sm-12">
+                <div class="form-group{if $error} has-error{/if}">
+                    <label class="control-label danger" for="{$label_attr.for}">{intl l=$label}</label>
+                    <textarea id="{$label_attr.for}" class="form-control" type="text" name="{$name}" value="{$value}"></textarea>
                 </div>
             </div>
         {/form_field}

@@ -7,33 +7,36 @@
 namespace TheliaGiftCard\Form;
 
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Thelia\Form\BaseForm;
+use TheliaGiftCard\Form\Config\ManualyEditGiftCard;
 use TheliaGiftCard\TheliaGiftCard;
-use Symfony\Component\Validator\Constraints as Assert;
 
-class ActivateGiftCardToCustomerForm extends BaseForm
+class BuyCustomGiftCardForm extends BaseGiftCardForm
 {
+    /**
+     * @return string
+     */
     public static function getName(): string
     {
-        return 'activate_gift_card_to_customer';
+        return 'save_gift_card_info';
     }
 
+    /**
+     * @return void|null
+     */
     protected function buildForm()
     {
+        parent::buildForm();
 
         $this->formBuilder
             ->add(
-                'code_gift_card',
+                'product_id',
                 TextType::class,
                 [
-                    'label' => $this->translator->trans('FORM_ADD_CODE_CARD_GIFT', [], TheliaGiftCard::DOMAIN_NAME),
+                    'label' => $this->translator->trans('FORM_ADD_SPONSOR_NAME', [], TheliaGiftCard::DOMAIN_NAME),
                     'label_attr' => [
                         'for' => $this->getName() . '-label'
-                    ],
-                    'constraints' => [
-                        new Assert\NotBlank
                     ]
-                ]
-            );
+                ]);
+
     }
 }

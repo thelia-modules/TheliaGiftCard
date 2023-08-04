@@ -19,21 +19,22 @@ class HookManager extends BaseHook
     /*
     * @var SecurityContext
     */
-    private $securityContext;
+    private SecurityContext $securityContext;
 
     public function __construct( SecurityContext $securityContext)
     {
+        parent::__construct();
         $this->securityContext = $securityContext;
     }
 
-    public function cardGiftAccountUsageInOrder(HookRenderEvent $event)
+    public function cardGiftAccountUsageInOrder(HookRenderEvent $event): void
     {
         $event->add(
             $this->render("gift-card-usage-on-order.html", [ 'order_id' => $event->getArgument('order_id') ])
         );
     }
 
-    public function onMainTopMenuTools(HookRenderBlockEvent $event)
+    public function onMainTopMenuTools(HookRenderBlockEvent $event): void
     {
         $isGranted = $this->securityContext->isGranted(
             ["ADMIN"],

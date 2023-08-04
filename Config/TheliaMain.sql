@@ -66,6 +66,8 @@ CREATE TABLE `gift_card_info_cart`
     `sponsor_name` VARCHAR(250),
     `beneficiary_name` VARCHAR(250),
     `beneficiary_message` VARCHAR(500),
+    `beneficiary_address` VARCHAR(500),
+    `beneficiary_email` VARCHAR(500),
     PRIMARY KEY (`id`),
     INDEX `fi_gift_card_info_cart` (`cart_id`),
     INDEX `fi_gift_card_info_cart_item` (`cart_item_id`),
@@ -92,22 +94,15 @@ CREATE TABLE `gift_card_cart`
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `gift_card_id` INTEGER,
     `cart_id` INTEGER NOT NULL,
-    `cart_item_id` INTEGER NOT NULL,
     `spend_amount` DECIMAL(16,6),
     `created_at` DATETIME,
     `updated_at` DATETIME,
     PRIMARY KEY (`id`),
     INDEX `fi_cart_gift_card` (`cart_id`),
-    INDEX `fi_cart_item_gift_card` (`cart_item_id`),
     INDEX `fi_card_gift_cart_cg` (`gift_card_id`),
     CONSTRAINT `fk_cart_gift_card`
         FOREIGN KEY (`cart_id`)
         REFERENCES `cart` (`id`)
-        ON UPDATE CASCADE
-        ON DELETE CASCADE,
-    CONSTRAINT `fk_cart_item_gift_card`
-        FOREIGN KEY (`cart_item_id`)
-        REFERENCES `cart_item` (`id`)
         ON UPDATE CASCADE
         ON DELETE CASCADE,
     CONSTRAINT `fk_card_gift_cart_cg`

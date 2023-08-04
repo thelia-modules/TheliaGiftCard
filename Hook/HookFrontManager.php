@@ -14,7 +14,7 @@ use TheliaGiftCard\TheliaGiftCard;
 
 class HookFrontManager extends BaseHook
 {
-    public function onAccountBottom(HookRenderEvent $event)
+    public function onAccountBottom(HookRenderEvent $event): void
     {
         $category = CategoryQuery::create()->findPk(TheliaGiftCard::getGiftCardCategoryId());
         if ($category) {
@@ -26,14 +26,14 @@ class HookFrontManager extends BaseHook
         }
     }
 
-    public function onOrderInvoiceBottom(HookRenderEvent $event)
+    public function onOrderInvoiceBottom(HookRenderEvent $event): void
     {
         $event->add(
             $this->render("order-invoice-gift-card.html", ['total_without_giftcard' => $event->getArgument('total')])
         );
     }
 
-    public function onProductAdditional(HookRenderEvent $event)
+    public function onProductAdditional(HookRenderEvent $event): void
     {
         $productId = $event->getArgument('product');
 

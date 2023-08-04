@@ -6,15 +6,16 @@
 
 namespace TheliaGiftCard\Form;
 
+use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Thelia\Form\BaseForm;
 use TheliaGiftCard\TheliaGiftCard;
 
-class SaveInfoGiftCardForm extends BaseForm
+Abstract class BaseGiftCardForm extends BaseForm
 {
-    public static function getName()
+    public static function getName(): string
     {
-        return 'save_gift_card_info';
+        return 'base_gift_card_form';
     }
 
     protected function buildForm()
@@ -48,14 +49,22 @@ class SaveInfoGiftCardForm extends BaseForm
                     ]
                 ])
             ->add(
-                'product_id',
+                'beneficiary_email',
+                EmailType::class,
+                [
+                    'label' => $this->translator->trans('FORM_ADD_BENEFICIARY_MESSAGE', [], TheliaGiftCard::DOMAIN_NAME),
+                    'label_attr' => [
+                        'for' => $this->getName() . '-label'
+                    ]
+                ])
+            ->add(
+                'beneficiary_address',
                 TextType::class,
                 [
-                    'label' => $this->translator->trans('FORM_ADD_SPONSOR_NAME', [], TheliaGiftCard::DOMAIN_NAME),
+                    'label' => $this->translator->trans('FORM_ADD_BENEFICIARY_ADDRESS', [], TheliaGiftCard::DOMAIN_NAME),
                     'label_attr' => [
                         'for' => $this->getName() . '-label'
                     ]
                 ]);
-
     }
 }

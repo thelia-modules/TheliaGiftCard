@@ -3,26 +3,26 @@
 namespace TheliaGiftCard\Controller\Api;
 
 use OpenApi\Annotations as OA;
-use OpenApi\Controller\Front\BaseFrontOpenApiController;
+use Symfony\Component\Routing\Annotation\Route;
 
+use OpenApi\Exception\OpenApiException;
+use Propel\Runtime\Exception\PropelException;
+use OpenApi\Controller\Front\BaseFrontOpenApiController;
 use OpenApi\Model\Api\ModelFactory;
 use Propel\Runtime\ActiveQuery\Criteria;
-
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Thelia\Core\HttpFoundation\Request;
-use Thelia\Core\Translation\Translator;
+use Thelia\Core\HttpFoundation\Response;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\Customer;
 use Thelia\Model\Map\ProductI18nTableMap;
-
 use TheliaGiftCard\Model\GiftCard;
 use TheliaGiftCard\Model\Api\GiftCard as OpenApiGiftCard;
 use TheliaGiftCard\Model\GiftCardQuery;
 use TheliaGiftCard\Model\Map\GiftCardCartTableMap;
 use TheliaGiftCard\Model\Map\GiftCardTableMap;
 use TheliaGiftCard\TheliaGiftCard;
-use Symfony\Component\Routing\Annotation\Route;
 
 /**
  * Class GiftCardListApiController
@@ -76,73 +76,68 @@ class GiftCardListApiController extends BaseFrontOpenApiController
      *     )
      * )
      * )
+     * @throws PropelException|OpenApiException
      */
-    public function getGiftCards(Request $request, EventDispatcherInterface $dispatcher, ModelFactory $modelFactory)
+    public function getGiftCards(Request $request, EventDispatcherInterface $dispatcher, ModelFactory $modelFactory): Response
     {
         if ($this->cartHasGiftCard($request->getSession(), $dispatcher)) {
             return $this->JsonResponse([]);
         }
-
+        
+        /** @var Customer $customer */
+        $customer = $request->getSession()->getCustomerUser();
+        $cart = $request->getSession()->getSessionCart($dispatcher);
         $locale = $request->getSession()->getLang()->getLocale();
 
-        $search = GiftCardQuery::create()
-            ->useProductQuery('', Criteria::LEFT_JOIN)
-                ->useProductI18nQuery('', Criteria::LEFT_JOIN)
-                    ->filterByLocale($locale)
-                    ->_or()
-                    ->filterByLocale(null, Criteria::ISNULL)//TODO: Est-ce bien necessaire ?? ça fonctionne avec, à voir (note à moi même)
-                ->endUse()
-                ->endUse()
+        $giftCards = GiftCardQuery::create()
+            ->useProductQuery('')
+            ->useProductI18nQuery('', Criteria::LEFT_JOIN)
+            ->filterByLocale($locale)
+            ->_or()
+            ->filterByLocale(null, Criteria::ISNULL)//TODO: Est-ce bien necessaire ?? ça fonctionne avec, à voir (note à moi même)
+            ->endUse()
+            ->endUse()
             ->withColumn(ProductI18nTableMap::TABLE_NAME . '.' . 'title', 'PRODUCT_TITLE');
 
         if (!$request->get('show-expired')) {
-            $search->where(GiftCardTableMap::COL_SPEND_AMOUNT . ' < ' . GiftCardTableMap::COL_AMOUNT);
+            $giftCards->where(GiftCardTableMap::COL_SPEND_AMOUNT . ' < ' . GiftCardTableMap::COL_AMOUNT);
         }
 
         if (!$request->get('show-desactivate')) {
-            $search->filterByStatus(1);
+            $giftCards->filterByStatus(1);
         }
 
         if ($cardId = $request->get('card-id')) {
-            $search->filterById($cardId);
+            $giftCards->filterById($cardId);
         }
+        $giftCards->filterByBeneficiaryCustomerId($customer->getId(), Criteria::EQUAL);
 
-        /** @var Customer $customer */
-        $customer = $request->getSession()->getCustomerUser();
-
-        $search->filterByBeneficiaryCustomerId($customer->getId(), Criteria::EQUAL);
-
-        $cart = $request->getSession()->getSessionCart($dispatcher);
-
-        $search
+        $giftCards
             ->useGiftCardCartQuery()
-                ->withColumn("SUM(" . GiftCardCartTableMap::COL_SPEND_AMOUNT . ")", 'CART_SPEND_AMOUNT')
+            ->withColumn("SUM(" . GiftCardCartTableMap::COL_SPEND_AMOUNT . ")", 'CART_SPEND_AMOUNT')
             ->endUse();
 
         if ($cart && $request->get('show-on-cart')) {
-            $search
+            $giftCards
                 ->useGiftCardCartQuery()
-                    ->filterByCartId($cart->getId())
+                ->filterByCartId($cart->getId())
                 ->endUse();
         }
 
-        $gifCards = $search->groupby(GiftCardTableMap::COL_ID)->find();
+        $giftCards->groupby(GiftCardTableMap::COL_ID)->find();
 
         return $this->jsonResponse(
             json_encode(array_map(function (GiftCard $giftCard) use ($modelFactory) {
-                /** @var OpenApiGiftCard $openGifCard */
-                $openGifCard = $modelFactory->buildModel('GiftCard', $giftCard);
-                $openGifCard->validate(self::GROUP_READ);
-                return $openGifCard;
+                    /** @var OpenApiGiftCard $openGifCard */
+                    $openGifCard = $modelFactory->buildModel('GiftCard', $giftCard);
+                    $openGifCard->validate(self::GROUP_READ);
+                    return $openGifCard;
 
-            }, iterator_to_array($gifCards))
-        ));
+                }, iterator_to_array($giftCards))
+            ));
     }
 
-    /**
-     * @return bool
-     */
-    public function cartHasGiftCard(Session $session, EventDispatcherInterface $dispatcher)
+    public function cartHasGiftCard(Session $session, EventDispatcherInterface $dispatcher): bool
     {
         $cart = $session->getSessionCart($dispatcher);
         if ($cart == null) {

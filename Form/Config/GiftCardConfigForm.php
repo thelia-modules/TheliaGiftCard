@@ -1,32 +1,33 @@
 <?php
 
-
 namespace TheliaGiftCard\Form\Config;
 
-
 use Propel\Runtime\ActiveQuery\Criteria;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Thelia\Core\HttpFoundation\Request;
 use Thelia\Core\Translation\Translator;
 use Thelia\Form\BaseForm;
 use Symfony\Component\Validator\Constraints as Assert;
 use Thelia\Model\Category;
 use Thelia\Model\CategoryQuery;
-use Thelia\Model\Lang;
 use Thelia\Model\OrderStatusQuery;
 use TheliaGiftCard\TheliaGiftCard;
 
 class GiftCardConfigForm extends BaseForm
 {
+    protected int $selectedGiftCardCategory;
+    protected int $selectedGiftCardOrderStatus;
+    protected bool $selectedGiftCardMode;
 
-    protected $selectedGiftCardCategory;
-    protected $selectedGiftCardOrderStatus;
-    protected $selectedGiftCardMode;
-
+    /**
+     * @return void|null
+     */
     protected function buildForm()
     {
         $this->selectedGiftCardCategory = TheliaGiftCard::getGiftCardCategoryId();
         $this->selectedGiftCardOrderStatus = TheliaGiftCard::getGiftCardOrderStatusId();
-        $this->selectedGiftCardMode  = TheliaGiftCard::getGiftCardModeId();
+        $this->selectedGiftCardMode = TheliaGiftCard::isAutoSendEmail();
 
         $this->formBuilder
             ->add(
@@ -56,13 +57,25 @@ class GiftCardConfigForm extends BaseForm
                         new Assert\NotBlank
                     ],
                 ]
+            )
+            ->add(
+                'gift_card_auto_send',
+                CheckboxType::class, [
+                    'label' => Translator::getInstance()->trans("Activate auto send gift card by email", [], TheliaGiftCard::DOMAIN_NAME),
+                    'label_attr' => array(
+                        'for' => 'gift_card_auto_send'
+                    ),
+                    'required' => false
+                ]
             );
     }
 
-    public function getAllCategories()
+    public function getAllCategories(): array
     {
-        /** @var Lang $lang */
-        $lang = $this->request->getSession() ? $this->request->getSession()->getLang(true) : $this->request->lang = Lang::getDefaultLanguage();
+        /** @var Request $request */
+        $request = $this->request;
+
+        $lang = $request->getSession()?->getAdminEditionLang();
 
         $categories = CategoryQuery::create()
             ->joinWithI18n($lang->getLocale(), Criteria::INNER_JOIN)
@@ -78,10 +91,15 @@ class GiftCardConfigForm extends BaseForm
         return $tabData;
     }
 
-    public function getAllOrderStatus()
+    /**
+     * @return array
+     */
+    public function getAllOrderStatus(): array
     {
-        /** @var Lang $lang */
-        $lang = $this->request->getSession() ? $this->request->getSession()->getLang(true) : $this->request->lang = Lang::getDefaultLanguage();
+        /** @var Request $request */
+        $request = $this->request;
+
+        $lang = $request->getSession()?->getAdminEditionLang();
 
         $ordersStatus = OrderStatusQuery::create()
             ->joinWithI18n($lang->getLocale(), Criteria::INNER_JOIN)
@@ -97,7 +115,7 @@ class GiftCardConfigForm extends BaseForm
         return $tabData;
     }
 
-    public static function getName()
+    public static function getName(): string
     {
         return "gift_card_config";
     }

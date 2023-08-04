@@ -6,74 +6,73 @@
 
 namespace TheliaGiftCard\Hook;
 
+use Propel\Runtime\Exception\PropelException;
 use Thelia\Core\Event\Hook\HookRenderEvent;
 use Thelia\Core\Hook\BaseHook;
-use Thelia\Model\CategoryQuery;
-use Thelia\Tools\URL;
 use TheliaGiftCard\TheliaGiftCard;
 use TheliaGiftCard\Model\Map\GiftCardTableMap;
-use TheliaGiftCard\Model\GiftCard;
 use TheliaGiftCard\Model\GiftCardQuery;
-use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
 use Thelia\Core\Translation\Translator;
 
 class HookConfigurationManager extends BaseHook
 {
-
-    public function onConfiguration(HookRenderEvent $event)
+    /**
+     * @throws PropelException
+     */
+    public function onConfiguration(HookRenderEvent $event): void
     {
-      $giftCards = GiftCardQuery::create()->find();
-      $allInfo = array(
-        'orders' => array(),
-        'sponsor_customers' => array(),
-        'beneficiary_customers' => array(),
-        'languages' => array()
-      );
-
-      foreach ($giftCards as $giftCard) {
-        $beneficiaryCustomer = $giftCard->getCustomerRelatedByBeneficiaryCustomerId();
-        if ($beneficiaryCustomer !== null) {
-            $fullName = $beneficiaryCustomer->getFirstname() . ' ' . $beneficiaryCustomer->getLastname();
-            $allInfo['beneficiary_customers'][$giftCard->getBeneficiaryCustomerId()] = $fullName;
-        }
-
-        $sponsorCustomer = $giftCard->getCustomerRelatedBySponsorCustomerId();
-        if ($sponsorCustomer !== null) {
-            $fullName = $sponsorCustomer->getFirstname() . ' ' . $sponsorCustomer->getLastname();
-            $allInfo['sponsor_customers'][$giftCard->getSponsorCustomerId()] = $fullName;
-        }
-
-        $order = $giftCard->getOrder();
-        if ($order !== null)
-          $allInfo['orders'][$giftCard->getOrderId()] = $order->getRef();
-      }
-
-      $languages = LangQuery::create()
-        ->filterByActive(1)
-        ->find();
-
-      foreach ($languages as $language) {
-        $lang = array(
-            'locale' => $language->getLocale(),
-            'code' => $language->getCode(),
-            'title' => $language->getTitle()
+        $giftCards = GiftCardQuery::create()->find();
+        $allInfo = array(
+            'orders' => array(),
+            'sponsor_customers' => array(),
+            'beneficiary_customers' => array(),
+            'languages' => array()
         );
-        array_push($allInfo['languages'], $lang);
-      };
 
-      $event->add(
-          $this->render("gift-card-config.html",
-          [
-                'all_info' => $allInfo,
-                'columnsDefinitionTransaction' => $this->defineColumnsDefinition()
-          ]
-        )
-      );
-      $event->add($this->addCSS('assets/css/style.css'));
+        foreach ($giftCards as $giftCard) {
+            $beneficiaryCustomer = $giftCard->getCustomerRelatedByBeneficiaryCustomerId();
+            if ($beneficiaryCustomer !== null) {
+                $fullName = $beneficiaryCustomer->getFirstname() . ' ' . $beneficiaryCustomer->getLastname();
+                $allInfo['beneficiary_customers'][$giftCard->getBeneficiaryCustomerId()] = $fullName;
+            }
+
+            $sponsorCustomer = $giftCard->getCustomerRelatedBySponsorCustomerId();
+            if ($sponsorCustomer !== null) {
+                $fullName = $sponsorCustomer->getFirstname() . ' ' . $sponsorCustomer->getLastname();
+                $allInfo['sponsor_customers'][$giftCard->getSponsorCustomerId()] = $fullName;
+            }
+
+            $order = $giftCard->getOrder();
+            if ($order !== null)
+                $allInfo['orders'][$giftCard->getOrderId()] = $order->getRef();
+        }
+
+        $languages = LangQuery::create()
+            ->filterByActive(1)
+            ->find();
+
+        foreach ($languages as $language) {
+            $lang = array(
+                'locale' => $language->getLocale(),
+                'code' => $language->getCode(),
+                'title' => $language->getTitle()
+            );
+            $allInfo['languages'][] = $lang;
+        }
+
+        $event->add(
+            $this->render("gift-card-config.html",
+                [
+                    'all_info' => $allInfo,
+                    'columnsDefinitionTransaction' => $this->defineColumnsDefinition()
+                ]
+            )
+        );
+        $event->add($this->addCSS('assets/css/style.css'));
     }
 
-    public function onProductEditJs(HookRenderEvent $event)
+    public function onProductEditJs(HookRenderEvent $event): void
     {
         $event->add(
             $this->render(
@@ -82,20 +81,20 @@ class HookConfigurationManager extends BaseHook
         );
     }
 
-    protected function defineColumnsDefinition()
+    protected function defineColumnsDefinition(): array
     {
-      return HookConfigurationManager::getdefineColumnsDefinition();
+        return HookConfigurationManager::getdefineColumnsDefinition();
     }
 
-    public static function getdefineColumnsDefinition()
+    public static function getdefineColumnsDefinition(): array
     {
         $i = -1;
 
-        $definitions = [
+        return [
             [
                 'name' => 'id',
                 'targets' => ++$i,
-                'orm' => GiftCardTableMap::ID,
+                'orm' => GiftCardTableMap::COL_ID,
                 'title' => Translator::getInstance()->trans('ID', [], TheliaGiftCard::DOMAIN_NAME),
                 'searchable' => false,
             ],
@@ -110,7 +109,7 @@ class HookConfigurationManager extends BaseHook
             [
                 'name' => 'code',
                 'targets' => ++$i,
-                'orm' => GiftCardTableMap::CODE,
+                'orm' => GiftCardTableMap::COL_CODE,
                 'title' => Translator::getInstance()->trans('code', [], TheliaGiftCard::DOMAIN_NAME),
                 'searchable' => true,
 
@@ -118,14 +117,14 @@ class HookConfigurationManager extends BaseHook
             [
                 'name' => 'sponsor_customer_id',
                 'targets' => ++$i,
-                'orm' => GiftCardTableMap::SPONSOR_CUSTOMER_ID,
+                'orm' => GiftCardTableMap::COL_SPONSOR_CUSTOMER_ID,
                 'title' => Translator::getInstance()->trans('sponsor_customer', [], TheliaGiftCard::DOMAIN_NAME),
                 'searchable' => true,
             ],
             [
                 'name' => 'beneficiary_customer_id',
                 'targets' => ++$i,
-                'orm' => GiftCardTableMap::BENEFICIARY_CUSTOMER_ID,
+                'orm' => GiftCardTableMap::COL_BENEFICIARY_CUSTOMER_ID,
                 'title' => Translator::getInstance()->trans('beneficiary_customer', [], TheliaGiftCard::DOMAIN_NAME),
                 'searchable' => true,
 
@@ -133,7 +132,7 @@ class HookConfigurationManager extends BaseHook
             [
                 'name' => 'amount',
                 'targets' => ++$i,
-                'orm' => GiftCardTableMap::AMOUNT,
+                'orm' => GiftCardTableMap::COL_AMOUNT,
                 'title' => Translator::getInstance()->trans('amount', [], TheliaGiftCard::DOMAIN_NAME),
                 'searchable' => true,
 
@@ -141,7 +140,7 @@ class HookConfigurationManager extends BaseHook
             [
                 'name' => 'spend_amount',
                 'targets' => ++$i,
-                'orm' => GiftCardTableMap::SPEND_AMOUNT,
+                'orm' => GiftCardTableMap::COL_SPEND_AMOUNT,
                 'title' => Translator::getInstance()->trans('spend_amount', [], TheliaGiftCard::DOMAIN_NAME),
                 'searchable' => true,
 
@@ -149,14 +148,14 @@ class HookConfigurationManager extends BaseHook
             [
                 'name' => 'expiration_date',
                 'targets' => ++$i,
-                'orm' => GiftCardTableMap::EXPIRATION_DATE,
+                'orm' => GiftCardTableMap::COL_EXPIRATION_DATE,
                 'title' => Translator::getInstance()->trans('expiration_date', [], TheliaGiftCard::DOMAIN_NAME),
                 'searchable' => false,
             ],
             [
                 'name' => 'created_at',
                 'targets' => ++$i,
-                'orm' => GiftCardTableMap::CREATED_AT,
+                'orm' => GiftCardTableMap::COL_CREATED_AT,
                 'title' => Translator::getInstance()->trans('created_at', [], TheliaGiftCard::DOMAIN_NAME),
                 'searchable' => false,
 
@@ -164,7 +163,7 @@ class HookConfigurationManager extends BaseHook
             [
                 'name' => 'status',
                 'targets' => ++$i,
-                'orm' => GiftCardTableMap::STATUS,
+                'orm' => GiftCardTableMap::COL_STATUS,
                 'title' => Translator::getInstance()->trans('status', [], TheliaGiftCard::DOMAIN_NAME),
                 'searchable' => true,
 
@@ -184,7 +183,5 @@ class HookConfigurationManager extends BaseHook
                 'searchable' => false,
             ]
         ];
-
-        return $definitions;
     }
 }

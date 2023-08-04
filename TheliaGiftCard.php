@@ -6,60 +6,48 @@
 
 namespace TheliaGiftCard;
 
+use Exception;
 use Propel\Runtime\Connection\ConnectionInterface;
+use SplFileInfo;
 use Symfony\Component\Finder\Finder;
-use Thelia\Core\Event\Category\CategoryCreateEvent;
 use Thelia\Core\Event\Feature\FeatureCreateEvent;
 use Thelia\Core\Event\Order\OrderEvent;
-use Thelia\Core\Event\Product\ProductCreateEvent;
-use Thelia\Core\Event\Tax\TaxEvent;
 use Thelia\Core\Event\Template\TemplateCreateEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Core\Template\TemplateDefinition;
 use Thelia\Core\Translation\Translator;
 use Thelia\Install\Database;
+use Thelia\Model\AddressQuery;
 use Thelia\Model\Base\FeatureTemplateQuery;
 use Thelia\Model\Base\ModuleConfig;
-use Thelia\Model\Category;
-use Thelia\Model\CategoryI18nQuery;
+use Thelia\Model\Cart;
 use Thelia\Model\CategoryQuery;
 use Thelia\Model\ConfigQuery;
-use Thelia\Model\Country;
-use Thelia\Model\CountryQuery;
 use Thelia\Model\FeatureQuery;
 use Thelia\Model\FeatureTemplate;
 use Thelia\Model\ModuleConfigQuery;
 use Thelia\Model\Order;
 use Thelia\Model\OrderStatusQuery;
-use Thelia\Model\Product;
 use Thelia\Model\ProductCategory;
 use Thelia\Model\ProductCategoryQuery;
-use Thelia\Model\ProductPrice;
-use Thelia\Model\ProductQuery;
-use Thelia\Model\ProductSaleElements;
-use Thelia\Model\Tax;
-use Thelia\Model\TaxI18nQuery;
-use Thelia\Model\TaxRule;
-use Thelia\Model\TaxRuleCountry;
-use Thelia\Model\TaxRuleQuery;
 use Thelia\Model\TemplateQuery;
 use Thelia\Module\AbstractPaymentModule;
+use Thelia\TaxEngine\TaxEngine;
+use TheliaGiftCard\Model\GiftCardCartQuery;
 use TheliaGiftCard\Model\GiftCardQuery;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
+use TheliaGiftCard\Model\Map\GiftCardCartTableMap;
+use TheliaGiftCard\Service\GiftCardService;
+use TheliaGiftCard\Service\GiftCardSpend;
 
 class TheliaGiftCard extends AbstractPaymentModule
 {
-    /** @var Translator */
-    protected $translator;
-
-    /** @var string */
-    const DOMAIN_NAME = 'theliagiftcard';
-
-    /** @var string */
-    const MODULE_CODE = 'TheliaGiftCard';
+    const  DOMAIN_NAME = 'theliagiftcard';
+    const  MODULE_CODE = 'TheliaGiftCard';
 
     const GIFT_CARD_CART_PRODUCT_REF = 'GIFTCARD_CART';
 
+    const GIFT_CARD_TOOL_CATEGORY_CONF_NAME = 'gift_card_tool_category';
     const GIFT_CARD_CATEGORY_CONF_NAME = 'gift_card_category';
     const GIFT_CARD_ORDER_STATUS_CONF_NAME = 'gift_card_order_status';
     const GIFT_CARD_MODE_CONF_NAME = 'gift_card_mode';
@@ -72,7 +60,7 @@ class TheliaGiftCard extends AbstractPaymentModule
 
     const STRING_CODE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890';
 
-    public static function GENERATE_CODE()
+    public static function GENERATE_CODE(): string
     {
         $code = '';
 
@@ -93,18 +81,16 @@ class TheliaGiftCard extends AbstractPaymentModule
         return $code;
     }
 
-
     public function postActivation(ConnectionInterface $con = null): void
     {
         try {
             GiftCardQuery::create()->findOne();
-        } catch (\Exception $e) {
+        } catch (Exception) {
             $database = new Database($con);
-            $database->insertSql(null, [__DIR__ . "/Config/thelia.sql"]);
+            $database->insertSql(null, [__DIR__ . "/Config/TheliaMain.sql"]);
         }
         $locale = $this->getRequest()->getSession()->getLang()->getLocale();
-        $category = $this->createGiftCardCartCategory($locale, $con);
-        $this->createCartGiftCartProduct($locale, $category, $con);
+
         $this->handleGiftCardTemplate($locale);
     }
 
@@ -118,7 +104,7 @@ class TheliaGiftCard extends AbstractPaymentModule
 
         $database = new Database($con);
 
-        /** @var \SplFileInfo $file */
+        /** @var SplFileInfo $file */
         foreach ($finder as $file) {
             if (version_compare($currentVersion, $file->getBasename('.sql'), '<')) {
                 $database->insertSql(null, [$file->getPathname()]);
@@ -126,7 +112,7 @@ class TheliaGiftCard extends AbstractPaymentModule
         }
     }
 
-    public function getHooks()
+    public function getHooks(): array
     {
         return array(
             [
@@ -166,43 +152,64 @@ class TheliaGiftCard extends AbstractPaymentModule
         );
     }
 
-    public function isValidPayment()
+    public function isValidPayment(): bool
     {
-        return round($this->getCurrentOrderTotalAmount(true, true, true), 4) == 0;
+        /** @var GiftCardService $giftCardService */
+        $giftCardService = $this->getContainer()->get('gift.card.service');
+        return $giftCardService->isGiftCardPayment();
     }
 
-    public function pay(Order $order)
+    public function pay(Order $order): void
     {
         $event = new OrderEvent($order);
         $event->setStatus(OrderStatusQuery::getPaidStatus()->getId());
         $this->getDispatcher()->dispatch($event, TheliaEvents::ORDER_UPDATE_STATUS);
     }
 
-    public function manageStockOnCreation()
+    public function manageStockOnCreation(): bool
     {
         return false;
     }
 
-    public static function getGiftCardCategoryId()
+    public static function isAutoSendEmail(): bool
+    {
+        return (boolean)ConfigQuery::read(TheliaGiftCard::GIFT_CARD_MODE_CONF_NAME, false);
+    }
+
+    public static function getGiftCardCategoryId(): int
     {
         $categoryId = ConfigQuery::read(TheliaGiftCard::GIFT_CARD_CATEGORY_CONF_NAME, '');
         return intval($categoryId);
     }
 
-    public static function getGiftCardModeId()
-    {
-        $modeId = ConfigQuery::read(TheliaGiftCard::GIFT_CARD_MODE_CONF_NAME, '');
-        return intval($modeId);
-    }
-
-
-    public static function getGiftCardOrderStatusId()
+    public static function getGiftCardOrderStatusId(): int
     {
         $osId = ConfigQuery::read(TheliaGiftCard::GIFT_CARD_ORDER_STATUS_CONF_NAME, '');
         return intval($osId);
     }
 
-    public static function getGiftCardProductList()
+    public static function getTotalCartGiftCardAmount(int $cartId): float
+    {
+        try {
+            $giftCards = GiftCardCartQuery::create()
+                ->select([GiftCardCartTableMap::COL_SPEND_AMOUNT, 'spend_amount'])
+                ->filterByCartId($cartId)
+                ->find();
+
+            if ($giftCards->isEmpty()) {
+                return 0;
+            }
+
+            return array_reduce($giftCards->toArray(), function ($sum, $giftCard) {
+                return $sum + $giftCard['spend_amount'];
+            }, 0);
+
+        } catch (Exception) {
+            return 0;
+        }
+    }
+
+    public static function getGiftCardProductList(): array
     {
         $tab = [];
 
@@ -222,111 +229,7 @@ class TheliaGiftCard extends AbstractPaymentModule
         return $tab;
     }
 
-    /**
-     * @param $locale
-     * @param $con
-     * @return int|Category
-     * @throws \Propel\Runtime\Exception\PropelException
-     */
-    protected function createGiftCardCartCategory($locale, $con)
-    {
-        $cat = CategoryI18nQuery::create()
-            ->filterByTitle('Gift Card Tools')
-            ->findOne();
-
-        if (null == $cat) {
-            $eventCat = new CategoryCreateEvent();
-            $eventCat
-                ->setLocale($locale)
-                ->setTitle('Gift Card Tools')
-                ->setVisible(0)
-                ->setParent(0);
-
-            $this->getDispatcher()->dispatch($eventCat, TheliaEvents::CATEGORY_CREATE);
-
-            return $eventCat->getCategory();
-        }
-
-        return $cat->getCategory();
-    }
-
-    /**
-     * @param $locale
-     * @param Category $category
-     */
-    protected function createCartGiftCartProduct($locale, Category $category, ConnectionInterface $con)
-    {
-        $product = ProductQuery::create()
-            ->filterByRef(self::GIFT_CARD_CART_PRODUCT_REF)
-            ->findOne();
-
-        if (null === $product) {
-            $event = new ProductCreateEvent();
-
-            $event
-                ->setRef(self::GIFT_CARD_CART_PRODUCT_REF)
-                ->setTitle($this->trans('Gift Card'))
-                ->setLocale('fr_FR')
-                ->setQuantity(0)
-                ->setVisible(1)
-                ->setDefaultCategory($category->getId())
-                ->setBasePrice(0)
-                ->setVirtual(1)
-                ->setTaxRuleId($this->createTax($locale)->getId())
-                ->setCurrencyId(1);
-
-            $this->getDispatcher()->dispatch($event, TheliaEvents::PRODUCT_CREATE);
-        }
-    }
-
-    /**
-     * @param $locale
-     * @return mixed|TaxRule
-     */
-    protected function createTax($locale)
-    {
-        $currentTaxI18n = TaxI18nQuery::create()
-            ->filterByTitle('Tax GiftCard')
-            ->findOne();
-
-        if (null === $currentTaxI18n) {
-            $eventTax = new TaxEvent();
-            $eventTax
-                ->setTitle('Tax GiftCard')
-                ->setLocale($locale)
-                ->setDescription('Gift card tax 0%')
-                ->setType(Tax::unescapeTypeName('Thelia-TaxEngine-TaxType-PricePercentTaxType'))
-                ->setRequirements(array('percent' => 0));
-            $this->getDispatcher()->dispatch($eventTax, TheliaEvents::TAX_CREATE);
-
-            $taxRule = new TaxRule();
-            $taxRule
-                ->setLocale($locale)
-                ->setTitle('Tax rule GiftCard')
-                ->save();
-
-            $countries = CountryQuery::create()
-                ->filterByVisible(1)
-                ->find();
-
-            /** @var Country $country */
-            foreach ($countries as $country) {
-                $taxRuleCountry = new TaxRuleCountry();
-                $taxRuleCountry->setTaxRule($taxRule)
-                    ->setCountryId($country->getId())
-                    ->setTax($eventTax->getTax())
-                    ->setPosition(3)
-                    ->save();
-            }
-
-            return $taxRule;
-        }
-        /** @var TaxRuleCountry $taxRuleCountry */
-        $taxRuleCountry = $currentTaxI18n->getTax()->getTaxRuleCountries()->getFirst();
-        return $taxRuleCountry->getTaxRule();
-    }
-
-    protected function handleGiftCardTemplate($locale)
+    protected function handleGiftCardTemplate($locale): void
     {
         //Creation de gabarit et feature Carte cadeau pour forcer le montant d'une carte cadeau
         $configGCtemplateId = null;
@@ -348,7 +251,6 @@ class TheliaGiftCard extends AbstractPaymentModule
 
             if ($config->getName() == self::GIFT_CARD_FEATURE_CONFIG_NAME) {
                 $configGCfeatureId = $config->setLocale($locale)->getValue();
-                continue;
             }
         }
 
@@ -380,7 +282,7 @@ class TheliaGiftCard extends AbstractPaymentModule
                 $createFeatEvent = new FeatureCreateEvent();
                 $createFeatEvent
                     ->setLocale($locale)
-                    ->setTitle(Translator::getInstance()->trans(self::GIFT_CARD_FEATURE_NAME));
+                    ->setTitle($this->trans(self::GIFT_CARD_FEATURE_NAME));
                 $this->getDispatcher()->dispatch($createFeatEvent, TheliaEvents::FEATURE_CREATE);
 
                 TheliaGiftCard::setConfigValue(self::GIFT_CARD_FEATURE_NAME, $createFeatEvent->getFeature()->getId());
@@ -403,20 +305,16 @@ class TheliaGiftCard extends AbstractPaymentModule
         }
     }
 
-    protected function trans($id, $parameters = [], $locale = null)
+    protected function trans($id, $parameters = [], $locale = null): string
     {
-        if (null === $this->translator) {
-            $this->translator = Translator::getInstance();
-        }
-
-        return $this->translator->trans($id, $parameters, self::DOMAIN_NAME, $locale);
+        return Translator::getInstance()->trans($id, $parameters, self::DOMAIN_NAME, $locale);
     }
 
     public static function configureServices(ServicesConfigurator $servicesConfigurator): void
     {
-        $servicesConfigurator->load(self::getModuleCode().'\\', __DIR__)
-            ->exclude([THELIA_MODULE_DIR . ucfirst(self::getModuleCode()). "/I18n/*"])
-            ->autowire(true)
-            ->autoconfigure(true);
+        $servicesConfigurator->load(self::getModuleCode() . '\\', __DIR__)
+            ->exclude([THELIA_MODULE_DIR . ucfirst(self::getModuleCode()) . "/I18n/*"])
+            ->autowire()
+            ->autoconfigure();
     }
 }

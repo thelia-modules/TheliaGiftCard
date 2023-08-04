@@ -2,11 +2,12 @@
 
 namespace TheliaGiftCard\Model\Api;
 
+use DateTime;
 use OpenApi\Annotations as OA;
 use OpenApi\Constraint as Constraint;
 
 use OpenApi\Model\Api\BaseApiModel;
-use TheliaGiftCard\Model\Api\GiftCard as TheliaGifCard;
+use Propel\Runtime\Exception\PropelException;
 
 /**
  * @OA\Schema(
@@ -19,362 +20,264 @@ use TheliaGiftCard\Model\Api\GiftCard as TheliaGifCard;
 class GiftCard extends BaseApiModel
 {
     /**
-     * @var integer
      * @OA\Property(
      *    type="integer"
      * )
      * @Constraint\NotBlank(groups={"read", "update"})
      */
-    protected $id;
+    protected int $id;
 
     /**
-     * @var integer
      * @OA\Property(
      *    type="integer"
      * )
      * @Constraint\NotBlank(groups={"create", "update"})
      */
-    protected $sponsorCustomerId;
+    protected int $sponsorCustomerId;
 
     /**
-     * @var integer
      * @OA\Property(
      *    type="integer"
      * )
      */
-    protected $beneficiaryCustomerId;
+    protected int $beneficiaryCustomerId;
 
     /**
-     * @var integer
      * @OA\Property(
      *    type="integer"
      * )
      */
-    protected $orderId;
+    protected int $orderId;
 
     /**
-     * @var integer
      * @OA\Property(
      *    type="integer"
      * )
      */
-    protected $productId;
+    protected int $productId;
 
     /**
-     * @var string
      * @OA\Property(
      *    type="string"
      * )
      */
-    protected $productName;
+    protected string $productName;
 
     /**
-     * @var string
      * @OA\Property(
      *    type="string"
      * )
      * @Constraint\NotBlank(groups={"create", "update"})
      */
-    protected $code;
+    protected string $code;
 
     /**
-     * @var float
      * @OA\Property(
      *    type="float"
      * )
      */
-    protected $amount;
+    protected float $amount;
 
     /**
-     * @var float
      * @OA\Property(
      *    type="float"
      * )
      */
-    protected $spend_amount;
+    protected float $spend_amount;
 
     /**
-     * @var integer
      * @OA\Property(
      *    type="integer"
      * )
      */
-    protected $status;
+    protected int $status;
 
     /**
-     * @var \DateTime
      * @OA\Property(
      *    type="\DateTime"
      * )
      */
-    protected $expirationDate;
+    protected ?DateTime $expirationDate;
 
     /**
-     * @var \DateTime
      * @OA\Property(
      *    type="\DateTime"
      * )
      */
-    protected $createdAt;
+    protected DateTime $createdAt;
 
     /**
-     * @var boolean
      * @OA\Property(
      *    type="boolean"
      * )
      */
-    protected $expired;
+    protected bool $expired;
 
     /**
-     * @var float
      * @OA\Property(
      *    type="float"
      * )
      */
-    protected $cartspendAmount;
+    protected float $cartspendAmount;
 
     /**
-     * @param \TheliaGiftCard\Model\GiftCard $giftCard
-     * @param string $locale
-     * @return $this|GiftCard
-     * @throws \Propel\Runtime\Exception\PropelException
+     * @throws PropelException
      */
-    public function createFromTheliaModel($giftCard, $locale = 'en_US')
+    public function createFromTheliaModel($theliaModel, $locale = 'en_US'): void
     {
-        parent::createFromTheliaModel($giftCard, $locale);
+        parent::createFromTheliaModel($theliaModel, $locale);
 
-        $this->setProductName($giftCard->getVirtualColumn('PRODUCT_TITLE'));
-        $this->setCartspendAmount(($currentAmount = $giftCard->getVirtualColumn("CART_SPEND_AMOUNT")) ? $currentAmount : 0);
+        $this->setProductName($theliaModel->getVirtualColumn('PRODUCT_TITLE'));
+        $this->setCartspendAmount(($currentAmount = $theliaModel->getVirtualColumn("CART_SPEND_AMOUNT")) ? $currentAmount : 0);
 
-        $delta = (new \DateTime())
-            ->diff($giftCard->getExpirationDate())
+        if (!$theliaModel->getExpirationDate()) {
+            $this->setExpired(0);
+            return;
+        }
+
+        $delta = (new DateTime())
+            ->diff($theliaModel->getExpirationDate())
             ->format('%r');
 
-        $this->setExpired(($giftCard->getAmount() <= $giftCard->getSpendAmount() || null != $delta) ? 1 : 0);
-
-        return $this;
+        $this->setExpired(($theliaModel->getAmount() <= $theliaModel->getSpendAmount() || null != $delta) ? 1 : 0);
     }
 
-    /**
-     * @return int
-     */
     public function getId(): int
     {
         return $this->id;
     }
 
-    /**
-     * @param int $id
-     */
-    public function setId(int $id)
+    public function setId(int $id): void
     {
         $this->id = $id;
     }
 
-    /**
-     * @return int
-     */
-    public function getSponsorCustomerId()
+    public function getSponsorCustomerId(): int
     {
         return $this->sponsorCustomerId;
     }
 
-    /**
-     * @param int $sponsorCustomerId
-     */
-    public function setSponsorCustomerId(int $sponsorCustomerId = null)
+    public function setSponsorCustomerId(int $sponsorCustomerId = null): void
     {
         $this->sponsorCustomerId = $sponsorCustomerId;
     }
 
-    /**
-     * @return int
-     */
-    public function getBeneficiaryCustomerId()
+    public function getBeneficiaryCustomerId(): int
     {
         return $this->beneficiaryCustomerId;
     }
 
-    /**
-     * @param int $beneficiaryCustomerId
-     */
-    public function setBeneficiaryCustomerId(int $beneficiaryCustomerId)
+    public function setBeneficiaryCustomerId(int $beneficiaryCustomerId): void
     {
         $this->beneficiaryCustomerId = $beneficiaryCustomerId;
     }
 
-    /**
-     * @return int
-     */
-    public function getOrderId()
+    public function getOrderId(): int
     {
         return $this->orderId;
     }
 
-    /**
-     * @param int $orderId
-     */
-    public function setOrderId(int $orderId = null)
+    public function setOrderId(int $orderId = null): void
     {
         $this->orderId = $orderId;
     }
 
-    /**
-     * @return int
-     */
-    public function getProductId()
+    public function getProductId(): int
     {
         return $this->productId;
     }
 
-    /**
-     * @param int $productId
-     */
-    public function setProductId(int $productId = null)
+    public function setProductId(int $productId = null): void
     {
         $this->productId = $productId;
     }
 
-    /**
-     * @return string
-     */
-    public function getProductName()
+    public function getProductName(): string
     {
         return $this->productName;
     }
 
-    /**
-     * @param string $productName
-     */
-    public function setProductName(string $productName = null)
+    public function setProductName(string $productName = null): void
     {
         $this->productName = $productName;
     }
 
-    /**
-     * @return string
-     */
-    public function getCode()
+    public function getCode(): string
     {
         return $this->code;
     }
 
-    /**
-     * @param string $code
-     */
-    public function setCode(string $code)
+    public function setCode(string $code): void
     {
         $this->code = $code;
     }
 
-    /**
-     * @return float
-     */
-    public function getAmount()
+    public function getAmount(): float
     {
         return $this->amount;
     }
 
-    /**
-     * @param float $amount
-     */
-    public function setAmount(float $amount)
+    public function setAmount(float $amount): void
     {
         $this->amount = $amount;
     }
 
-    /**
-     * @return float
-     */
-    public function getSpendAmount()
+    public function getSpendAmount(): float
     {
         return $this->spend_amount;
     }
 
-    /**
-     * @param float $spend_amount
-     */
-    public function setSpendAmount(float $spend_amount = 0)
+    public function setSpendAmount(float $spend_amount = 0): void
     {
         $this->spend_amount = $spend_amount;
     }
 
-    /**
-     * @return int
-     */
-    public function getStatus()
+    public function getStatus(): int
     {
         return $this->status;
     }
 
-    /**
-     * @param int $status
-     */
-    public function setStatus(int $status)
+    public function setStatus(int $status): void
     {
         $this->status = $status;
     }
 
-    /**
-     * @return \DateTime
-     */
-    public function getExpirationDate()
+    public function getExpirationDate(): DateTime
     {
         return $this->expirationDate;
     }
 
-    /**
-     * @param \DateTime $expirationDate
-     */
-    public function setExpirationDate(\DateTime $expirationDate = null)
+    public function setExpirationDate(?DateTime $expirationDate = null): void
     {
         $this->expirationDate = $expirationDate;
     }
 
-    /**
-     * @return \DateTime
-     */
-    public function getCreatedAt()
+    public function getCreatedAt(): DateTime
     {
         return $this->createdAt;
     }
 
-    /**
-     * @param \DateTime $createdAt
-     */
-    public function setCreatedAt(\DateTime $createdAt)
+    public function setCreatedAt(DateTime $createdAt): void
     {
         $this->createdAt = $createdAt;
     }
 
-    /**
-     * @return float
-     */
-    public function getCartspendAmount()
+    public function getCartspendAmount(): float
     {
         return $this->cartspendAmount;
     }
 
-    /**
-     * @param float $cartspendAmount
-     */
-    public function setCartspendAmount(float $cartspendAmount = 0)
+    public function setCartspendAmount(float $cartspendAmount = 0): void
     {
         $this->cartspendAmount = $cartspendAmount;
     }
 
-    /**
-     * @return bool
-     */
-    public function isExpired()
+    public function isExpired(): bool
     {
         return $this->expired;
     }
 
-    /**
-     * @param bool $expired
-     */
-    public function setExpired(bool $expired = true)
+    public function setExpired(bool $expired = true): void
     {
         $this->expired = $expired;
     }

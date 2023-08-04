@@ -17,7 +17,7 @@ use TheliaGiftCard\Model\GiftCardOrderQuery;
 
 class GiftCardOrderList extends BaseLoop implements PropelSearchLoopInterface
 {
-    protected function getArgDefinitions()
+    protected function getArgDefinitions(): ArgumentCollection
     {
         return new ArgumentCollection(
             Argument::createIntListTypeArgument('order_id')
@@ -26,16 +26,12 @@ class GiftCardOrderList extends BaseLoop implements PropelSearchLoopInterface
 
     public function buildModelCriteria()
     {
-        $search = GiftCardOrderQuery::create()
+        return GiftCardOrderQuery::create()
         ->filterByOrderId($this->getOrderId());
-
-        return $search;
     }
 
     public function parseResults(LoopResult $loopResult)
     {
-        $dateNow = new \DateTime();
-
         /** @var GiftCardOrder $giftOrderCard */
         foreach ($loopResult->getResultDataCollection() as $giftOrderCard) {
             $loopResultRow = (new LoopResultRow($giftOrderCard))

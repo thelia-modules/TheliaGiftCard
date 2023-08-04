@@ -6,15 +6,12 @@
 
 namespace TheliaGiftCard\EventListener;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Propel\Runtime\Exception\PropelException;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Event\Order\OrderEvent;
 use Thelia\Core\Event\TheliaEvents;
-use Thelia\Model\CartItem;
 use Thelia\Model\CartItemQuery;
-use Thelia\Model\Order;
 use Thelia\Model\OrderProduct;
 use TheliaGiftCard\Model\GiftCardOrder;
 use TheliaGiftCard\Model\GiftCardOrderQuery;
@@ -22,17 +19,13 @@ use TheliaGiftCard\TheliaGiftCard;
 
 class OrderAfterPayListener implements EventSubscriberInterface
 {
-
-    /**
-     * @var Request
-     */
-    private $request;
-
-    public function __construct(RequestStack $requestStack)
+    public function __construct(protected RequestStack $requestStack)
     {
-        $this->request = $requestStack->getCurrentRequest();
     }
 
+    /**
+     * @throws PropelException
+     */
     public function onOrderAfterPayGiftCard(OrderEvent $event)
     {
         //on reset le postage prévu et on delete les orders produits de carte cadeaux
@@ -73,11 +66,13 @@ class OrderAfterPayListener implements EventSubscriberInterface
 
     }
 
-    public function onOrderCancelGiftCard(OrderEvent $event)
+    /**
+     * @throws PropelException
+     */
+    public function onOrderCancelGiftCard(OrderEvent $event): void
     {
         // Delete le montant dépensé par une carte cadeau sur une annulation d'order
         if ($event->getOrder()->getOrderStatus()->getCode() == 'canceled') {
-            /** @var Order $order */
             $order = $event->getOrder();
 
             $giftCardsOrder = GiftCardOrderQuery::create()
@@ -99,10 +94,9 @@ class OrderAfterPayListener implements EventSubscriberInterface
         }
     }
 
-    public static function getSubscribedEvents()
+    public static function getSubscribedEvents(): array
     {
         return [
-            TheliaEvents::ORDER_PAY => ['onOrderAfterPayGiftCard', 1],
             TheliaEvents::ORDER_UPDATE_STATUS => ['onOrderCancelGiftCard', 1]
         ];
     }

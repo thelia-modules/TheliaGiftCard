@@ -9,16 +9,26 @@ namespace TheliaGiftCard\Form\Config;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Validator\Constraints\NotBlank;
 use Thelia\Form\BaseForm;
 use TheliaGiftCard\TheliaGiftCard;
 
+/**
+ * Class ManualyEditGiftCard
+ */
 class ManualyEditGiftCard extends BaseForm
 {
-    public static function getName()
+    /**
+     * @return string
+     */
+    public static function getName(): string
     {
-        return 'edit_card_gift';
+        return 'edit_gift_card';
     }
 
+    /**
+     * @return void|null
+     */
     protected function buildForm()
     {
         $this->formBuilder
@@ -29,7 +39,8 @@ class ManualyEditGiftCard extends BaseForm
                     'label' => $this->translator->trans('FORM_EDIT_ID_GC', [], TheliaGiftCard::DOMAIN_NAME),
                     'label_attr' => [
                         'for' => $this->getName() . '-label'
-                    ]
+                    ],
+                    'constraints' => [new NotBlank()]
                 ])
             ->add(
                 'amount',
@@ -46,6 +57,15 @@ class ManualyEditGiftCard extends BaseForm
                 [
                     'widget' => 'single_text',
                     'label' => $this->translator->trans('FORM_EDIT_EXPIRATION_GC', [], TheliaGiftCard::DOMAIN_NAME),
+                    'label_attr' => [
+                        'for' => $this->getName() . '-label'
+                    ]
+                ])
+            ->add(
+                'beneficiary_address',
+                TextType::class,
+                [
+                    'label' => $this->translator->trans('FORM_EDIT_BENEFICIARY_ADDRESS', [], TheliaGiftCard::DOMAIN_NAME),
                     'label_attr' => [
                         'for' => $this->getName() . '-label'
                     ]

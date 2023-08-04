@@ -3,20 +3,13 @@
 <config xmlns="http://thelia.net/schema/dic/config"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://thelia.net/schema/dic/config http://thelia.net/schema/dic/config/thelia-1.0.xsd">
-    <forms>
-        <form name="config.card.gift" class="TheliaGiftCard\Form\Config\GiftCardConfigForm"/>
-        <form name="manualy.create.card.gift" class="TheliaGiftCard\Form\Config\ManualyCreateGiftCard" />
-        <form name="save.gift.card.info" class="TheliaGiftCard\Form\SaveInfoGiftCardForm"/>
-        <form name="activate.gift.card.to.customer" class="TheliaGiftCard\Form\ActivateGiftCardToCustomerForm" />
-        <form name="consume.gift.card" class="TheliaGiftCard\Form\ConsumeGiftCart" />
-        <form name="manualy.edit.gift.card" class="TheliaGiftCard\Form\Config\ManualyEditGiftCard" />
-        <form name="customer.email.gift.card" class="TheliaGiftCard\Form\GiftCardCustomerEmailForm" />
-    </forms>
     <loops>
         <loop name="gift.card.list" class="TheliaGiftCard\Loop\GiftCardList" />
         <loop name="gift.card.order.list" class="TheliaGiftCard\Loop\GiftCardOrderList" />
     </loops>
-    
+    <services>
+        <service id="gift.card.service" alias="TheliaGiftCard\Service\GiftCardService" public="true"/>
+    </services>
     <hooks>
         <hook id="theliagiftcard.hook" class="TheliaGiftCard\Hook\HookManager">
             <tag name="hook.event_listener" event="main.top-menu-tools" type="back" method="onMainTopMenuTools"/>

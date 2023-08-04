@@ -6,32 +6,31 @@
 
 namespace TheliaGiftCard\EventListener;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Propel\Runtime\Exception\PropelException;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Event\Cart\CartItemDuplicationItem;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Model\CartItem;
 use TheliaGiftCard\Model\GiftCardInfoCartQuery;
+use TheliaGiftCard\Service\GiftCardService;
 
 class CartListener implements EventSubscriberInterface
 {
-    /**
-     * @var Request
-     */
-    private $request;
-
-    public function __construct(RequestStack $requestStack)
+    public function __construct(
+        protected RequestStack $requestStack,
+        protected GiftCardService $giftCardService
+    )
     {
-        $this->request = $requestStack->getCurrentRequest();
     }
 
-    public function duplicateCartGiftCardInfo(CartItemDuplicationItem $cartEvent)
+    /**
+     * @throws PropelException
+     */
+    public function duplicateCartGiftCardInfo(CartItemDuplicationItem $cartEvent): void
     {
         //En cas de connexion pendant le tunnel de commande, on redistribue les nouveaux id cart item
 
-        /** @var CartItem $oldItem */
         $oldItem = $cartEvent->getOldItem();
         $oldCartId = $oldItem->getCartId();
 
@@ -54,10 +53,17 @@ class CartListener implements EventSubscriberInterface
         }
     }
 
-    public static function getSubscribedEvents()
+    public function resetGiftCard(): void
+    {
+        $this->giftCardService->reset();
+    }
+
+    public static function getSubscribedEvents(): array
     {
         return [
-            TheliaEvents::CART_ITEM_DUPLICATE => ['duplicateCartGiftCardInfo', 250]
+            TheliaEvents::CART_ITEM_DUPLICATE => ['duplicateCartGiftCardInfo', 250],
+            TheliaEvents::CART_DELETEITEM => ['resetGiftCard', 100],
+            TheliaEvents::CART_ADDITEM => ['resetGiftCard', 100]
         ];
     }
 }

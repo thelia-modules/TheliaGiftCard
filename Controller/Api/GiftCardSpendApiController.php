@@ -3,16 +3,19 @@
 namespace TheliaGiftCard\Controller\Api;
 
 use OpenApi\Annotations as OA;
+use Symfony\Component\Routing\Annotation\Route;
+
 use OpenApi\Controller\Front\BaseFrontOpenApiController;
 
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Thelia\Core\Event\DefaultActionEvent;
 use Thelia\Core\Event\TheliaEvents;
-use Thelia\Core\HttpFoundation\Request;
+use Thelia\Core\HttpFoundation\JsonResponse;
+use Thelia\Core\HttpFoundation\Session\Session;
+use Thelia\Model\Cart;
 use TheliaGiftCard\Form\ConsumeGiftCart;
-use TheliaGiftCard\Service\GiftCardService;
-use Symfony\Component\Routing\Annotation\Route;
+use TheliaGiftCard\Service\GiftCardSpend;
 
 /**
  * Class GiftCardListApiController
@@ -20,16 +23,6 @@ use Symfony\Component\Routing\Annotation\Route;
  */
 class GiftCardSpendApiController extends BaseFrontOpenApiController
 {
-    /**
-     * @var GiftCardService
-     */
-    private $giftCardService;
-
-    public function __construct(GiftCardService $giftCardService)
-    {
-       $this->giftCardService = $giftCardService;
-    }
-
     /**
      * @Route("/spend", name="spend_giftcard", methods="POST")
      *
@@ -69,35 +62,46 @@ class GiftCardSpendApiController extends BaseFrontOpenApiController
      * )
      * )
      */
-    public function spend(Request $request, EventDispatcherInterface $dispatcher)
+    public function spend(
+        EventDispatcherInterface $dispatcher,
+        Session                  $session,
+        GiftCardSpend            $giftCardSpend
+    ): JsonResponse
     {
+        /** @var Cart $cart */
+        $cart = $session->getSessionCart();
+        $restAmount = 0;
+
         $form = $this->createForm(ConsumeGiftCart::getName(), FormType::class, [], ['csrf_protection' => false]);
 
         $amountForm = $this->validateForm($form);
 
-        //TODO: a mettre en configuration, en l'etat, aucun cumule avec les coupons
-        $dispatcher->dispatch(new DefaultActionEvent(),TheliaEvents::COUPON_CLEAR_ALL);
-
         $amount = $amountForm->get('amount_used')->getData();
-        $codes = $amountForm->get('gift_card_codes')->getData();
         $deliveryModuleId = $amountForm->get('delivery_module_id')->getData();
 
-        $customer = $request->getSession()->getCustomerUser();
-        $cart = $request->getSession()->getSessionCart();
-        $order = $request->getSession()->getOrder();
+        //TODO: a mettre en configuration, en l'etat, aucun cumule avec les coupons
+        $dispatcher->dispatch(new DefaultActionEvent(), TheliaEvents::COUPON_CLEAR_ALL);
 
-        $restAmount = 0;
+        $giftCardSpend->deleteGiftCardOnCart($cart);
 
-        foreach (explode(',', $codes) as $code) {
+        if (0 > $amount) {
+            return new JsonResponse(["Success"]);
+        }
+
+        foreach ($amountForm->get('gift_card_codes')->getData() as $code) {
             if ($restAmount > 0) {
                 $amount = $amount + $restAmount;
             }
 
-            $restAmount = $this->giftCardService->spendGiftCard($code, $amount, $cart, $order, $customer, $deliveryModuleId);
+            $restAmount = $giftCardSpend->spendGiftCard($code, $amount, $deliveryModuleId);
         }
 
-        return $this->jsonResponse(
-            json_encode("Success")
-        );
+        if (!$session->getOrder()->getDeliveryModuleId()) {
+            //need to set chossendeliveryID in session
+            $session->getOrder()->setDeliveryModuleId($deliveryModuleId);
+            $session->save();
+        }
+
+        return new JsonResponse(["Success"]);
     }
 }

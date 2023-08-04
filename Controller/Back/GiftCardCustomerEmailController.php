@@ -1,90 +1,74 @@
 <?php
 
-
 namespace TheliaGiftCard\Controller\Back;
 
-
-use Symfony\Component\Form\Extension\Core\Type\FormType;
+use Exception;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Thelia\Controller\Admin\BaseAdminController;
-use Thelia\Core\HttpFoundation\JsonResponse;
-use Thelia\Core\HttpFoundation\Request;
 use Thelia\Core\Security\SecurityContext;
+use Thelia\Core\Template\ParserContext;
 use Thelia\Form\Exception\FormValidationException;
+use Thelia\Mailer\MailerFactory;
+use Thelia\Model\ConfigQuery;
 use Thelia\Tools\URL;
-use TheliaGiftCard\Model\GiftCardEmailStatus;
-use TheliaGiftCard\Model\GiftCardEmailStatusQuery;
-use TheliaGiftCard\TheliaGiftCard;
 
+use OpenApi\Annotations as OA;
 use Symfony\Component\Routing\Annotation\Route;
+
+use TheliaGiftCard\Service\GiftCardEmailService;
 
 /**
  * Class GiftCardCustomerEmailController
- * @Route("/admin/module/theliagiftcard/config/customer-email", name="gift_card_mail")
+ * @Route("/admin/module/theliagiftcard/giftcard", name="gift_card_mail")
  */
 class GiftCardCustomerEmailController extends BaseAdminController
 {
-    protected function checkAdmin(SecurityContext $securityContext)
-    {
-        return $test = $securityContext->hasAdminUser();
-    }
-
     /**
-     * @Route("/save", name="save_mail")
+     * @Route("/send", name="send_gift_card_mail", methods="POST")
+     * @throws Exception
      */
-    public function createOrUpdateAction(SecurityContext $securityContext)
+    public function createOrUpdateAction(
+        SecurityContext      $securityContext,
+        ParserContext        $parser,
+        MailerFactory        $mailer,
+        GiftCardEmailService $giftCardEmailService
+    ): RedirectResponse|Response|null
     {
-        if (null === $this->checkAdmin($securityContext)) {
+        if (null === $securityContext->hasAdminUser()) {
             return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/module/TheliaGiftCard'));
         }
 
-        $form = $this->createForm('customer.email.gift.card', FormType::class, [], ['csrf_protection' => false]);
+        $form = $this->createForm('gift_card_customer_email');
 
         try {
             $validatedForm = $this->validateForm($form);
-
             $data = $validatedForm->getData();
 
-            if (null === $giftCardEmailStatus = GiftCardEmailStatusQuery::create()->findOneByStatusId($data['status_id']))  {
-                $giftCardEmailStatus = new GiftCardEmailStatus();
-            }
+            $pdf = $giftCardEmailService->generatePdfAction($data['gift_card_code']);
 
-            $giftCardEmailStatus->setStatusId($data['status_id']);
+            $message = $mailer->createSimpleEmailMessage(
+                [ConfigQuery::getStoreEmail() => ConfigQuery::getStoreName()],
+                [$data["to"] => $data["to"]],
+                $data["email_subject"],
+                $giftCardEmailService->generateGiftCardEmailHtmlContent(false, $data),
+                "",
+            );
 
-            if (isset($data['status_id']) && 'ORDER_CREATED' === $data['status_id']) {
-                if (null === $giftCardEmailStatus = GiftCardEmailStatusQuery::create()->findOneBySpecialStatus($data['status_id'])) {
-                    $giftCardEmailStatus = new GiftCardEmailStatus();
-                }
-                $giftCardEmailStatus->setSpecialStatus($data['status_id']);
-            }
+            $message->attach($pdf, $data['gift_card_code'].".pdf",'application/pdf');
 
-            $giftCardEmailStatus->setEmailSubject($data['email_subject']);
-            $giftCardEmailStatus->setEmailText($data['email_text']);
-            $giftCardEmailStatus->save();
-        } catch (FormValidationException $error_message) {
-            throw new \Exception($error_message->getMessage());
-            /*$error_message = $error_message->getMessage();
-            $form->setErrorMessage($error_message);
-            $this->getParserContext()
+            $mailer->send($message);
+
+            return $this->generateSuccessRedirect($form);
+        } catch (FormValidationException $error) {
+            $messageError = $error->getMessage();
+
+            $form->setErrorMessage($messageError);
+            $parser
                 ->addForm($form)
-                ->setGeneralError($error_message);*/
+                ->setGeneralError($messageError);
         }
 
-        return $this->generateRedirect(URL::getInstance()->absoluteUrl($form->getSuccessUrl()));
-    }
-
-    /**
-     * @Route("/get", name="get_mail")
-     */
-    public function getEmailDataForStatus(Request $request)
-    {
-        if (null === $giftCardEmailData = GiftCardEmailStatusQuery::create()->findOneByStatusId($request->get('status_id'))) {
-            $giftCardEmailData = GiftCardEmailStatusQuery::create()->findOneBySpecialStatus($request->get('status_id'));
-        }
-
-        return new JsonResponse([
-            'id'            => $giftCardEmailData ? $giftCardEmailData->getId() : null,
-            'email_subject' => $giftCardEmailData ? $giftCardEmailData->getEmailSubject() : null,
-            'email_text'    => $giftCardEmailData ? $giftCardEmailData->getEmailText() : null
-        ]);
+        return $this->generateErrorRedirect($form);
     }
 }

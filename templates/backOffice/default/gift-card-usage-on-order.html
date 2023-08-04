@@ -14,7 +14,7 @@
                     {$currentSpendAmount = $SPEND_AMOUNT}
                     {$totalSpendAmount = $totalSpendAmount + $SPEND_AMOUNT}
                     {loop type="gift.card.list" name="gift_card_list_invoice" backend_context=1 card_id=$GIFTCARD_ID  expired=true}
-                    {intl l="Montant Carte Cadeau %code : <span %class>%amount</span>" class=$class code=$CODE amount={format_money number=$currentSpendAmount symbol=$currencySymbol} d="theliagiftcard"}
+                    {intl l="Montant Carte Cadeau %code : <span %class>%amount</span>" class=$class|default:"" code=$CODE amount={format_money number=$currentSpendAmount symbol=$currencySymbol} d="theliagiftcard"}
                     {/loop}
                 </p>
             {/loop}

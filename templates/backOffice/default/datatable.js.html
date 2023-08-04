@@ -11,7 +11,6 @@
 
     var all_info = {$all_info|@json_encode nofilter};
 
-
     $('body').on('click', '.status-button', function (e) {
         e.preventDefault();
 
@@ -102,7 +101,8 @@
                     let status = row[9];
                     let code = row[2];
                     if (status)
-                        return '<a class="btn status-button btn-success btn-default" href="{url path="/admin/module/theliagiftcard/deactivate" code=row_code}" title="{intl l="Deactivate_GIFT_CARD" d="theliagiftcard.bo.default"}"><span class="glyphicon glyphicon-off"></span></a>'.replace('row_code', code);
+                        return '<a class="btn status-button btn-success btn-default" href="{url path="/admin/module/theliagiftcard/deactivate" code=row_code}" title="{intl l="Deactivate_GIFT_CARD" d="theliagiftcard.bo.default"}"><span class="glyphicon glyphicon-off"></span></a>'.replace('row_code', code) +
+                        '<a class="btn status-button btn-default show_send_card_gift_dialog" href="#" data-toggle="modal" data-target="#send_gift_card_email" data-id="' + row[0] + '" data-code="' + code + '" data title="{intl l="Envoyer" d="theliagiftcard.bo.default"}"><span class="glyphicon glyphicon-send"></span></a>'.replace('row_code', code).replace('row_code', code);
                     return '<a class="btn status-button btn-danger btn-default" href="{url path="/admin/module/theliagiftcard/activate" code=row_code}" title="{intl l="Activate_GIFT_CARD" d="theliagiftcard.bo.default"}"><span class="glyphicon glyphicon-off"></span></a>'.replace('row_code', code);
                 }
             },
@@ -180,44 +180,16 @@
             table.classList.remove("hidden");
     }
 
-    let giftCardStatusSelect = $('#giftcard_status_id');
-
-    function getEmailData() {
-        let statusId = giftCardStatusSelect.val();
-        $('#email-customer-form input').attr('disabled', 'disabled');
-        $('#email-customer-form textarea').attr('disabled', 'disabled');
-
-        $.ajax({
-            type: "GET",
-            dataType: 'json',
-            data: 'status_id=' + statusId,
-            url: giftCardStatusSelect.data('action')
-        }).success(function(data, status){
-
-            $('#email-customer-form input').removeAttr('disabled');
-            $('#email-customer-form textarea').removeAttr('disabled');
-            $('#giftcard_email_subject').val(data.email_subject);
-            $('#giftcard_email_text').val(data.email_text);
-            $('#giftcard_email_id').val(data.id);
-        }).fail(function(jqXHR, textStatus, errorThrown){
-
-        });
-    }
-
-    getEmailData();
-
-    giftCardStatusSelect.on('change', function () {
-        getEmailData();
-    });
-
     function refreshFormData(code, specified = null) {
         $.ajax({
             method: "POST",
-            url: '{url path='/admin/module/TheliaGiftCard/show/'}' + code,
+            url: '{url path='/admin/module/theliagiftcard/show/'}' + code,
             dataType: "json",
             success: function (response) {
+                console.log(response);
                 $('#amount').val(response['amount']);
                 $('#expirationDate').val(response['expiration_date']);
+                $('#beneficiaryAddress').val(response['beneficiary_address']);
                 $('#giftCardId').val(response['card_id']);
 
                 buildTableFromLogs(response["HISTORY"]);
@@ -257,7 +229,15 @@
     $('.show_manualy_edit_card_gift_dialog').on('click', function () {
         console.log($(this).attr('id'))
         $('#giftCardId').val($(this).attr('id'))
-    })
+    });
+
+    $('#send_gift_card_email').on('shown.bs.modal', function (element) {
+        $('#giftCardCode').val($(element.relatedTarget).data('code'));
+    });
+
+    $('#send_gift_card_email').on('hide.bs.modal', function (element) {
+        $('#giftCardCode').val('');
+    });
 
     $('#manualy_edit_card_gift_dialog').on('show.bs.modal', function (e) {
         var code = $(e.relatedTarget).data('code');

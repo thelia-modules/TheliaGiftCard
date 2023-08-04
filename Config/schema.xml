@@ -45,6 +45,8 @@
         <column name="sponsor_name" size="250" type="VARCHAR" />
         <column name="beneficiary_name" size="250" type="VARCHAR" />
         <column name="beneficiary_message" size="500" type="VARCHAR" />
+        <column name="beneficiary_address" size="500" type="VARCHAR" />
+        <column name="beneficiary_email" size="500" type="VARCHAR" />
 
         <foreign-key foreignTable="cart" name="fk_gift_card_info_cart" onDelete="CASCADE" onUpdate="CASCADE">
             <reference foreign="id" local="cart_id" />
@@ -60,15 +62,10 @@
 
         <column name="gift_card_id" type="INTEGER" />
         <column name="cart_id" required="true" type="INTEGER" />
-        <column name="cart_item_id" required="true" type="INTEGER" />
         <column name="spend_amount" scale="6" size="16" type="DECIMAL" />
 
         <foreign-key foreignTable="cart" name="fk_cart_gift_card" onDelete="CASCADE" onUpdate="CASCADE">
             <reference foreign="id" local="cart_id" />
-        </foreign-key>
-
-        <foreign-key foreignTable="cart_item" name="fk_cart_item_gift_card" onDelete="CASCADE" onUpdate="CASCADE">
-            <reference foreign="id" local="cart_item_id" />
         </foreign-key>
 
         <foreign-key foreignTable="gift_card" name="fk_card_gift_cart_cg" onDelete="CASCADE" onUpdate="CASCADE">
