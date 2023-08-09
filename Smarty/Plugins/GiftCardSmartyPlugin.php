@@ -162,7 +162,7 @@ class GiftCardSmartyPlugin extends AbstractSmartyPlugin
         }
     }
 
-    public function getOrderSessionPostage(\Smarty_Internal_Template $smarty): void
+    public function getOrderSessionPostage($params,\Smarty_Internal_Template $smarty): void
     {
         if ($this->requestStack->getCurrentRequest()->hasSession()) {
             $postage = $this->requestStack->getCurrentRequest()->getSession()->get(TheliaGiftCard::GIFT_CARD_SESSION_POSTAGE);
