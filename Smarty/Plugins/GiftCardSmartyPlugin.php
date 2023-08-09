@@ -71,7 +71,7 @@ class GiftCardSmartyPlugin extends AbstractSmartyPlugin
 
     }
 
-    public function getGitCardInfo($params, $smarty): void
+    public function getGitCardInfo($params,\Smarty_Internal_Template $smarty): void
     {
         //Récupération des informations liées à l'achat d'une carte cadeau (bénéficiare, message ...)
 
@@ -137,7 +137,7 @@ class GiftCardSmartyPlugin extends AbstractSmartyPlugin
         return false;
     }
 
-    public function getGiftCardCartAmount($smarty): int|string|null
+    public function getGiftCardCartAmount($params, \Smarty_Internal_Template $smarty): int|string|null
     {
         $cart = $this->requestStack->getCurrentRequest()->getSession()->getSessionCart();
         $total = 0;
@@ -162,7 +162,7 @@ class GiftCardSmartyPlugin extends AbstractSmartyPlugin
         }
     }
 
-    public function getOrderSessionPostage($smarty): void
+    public function getOrderSessionPostage($params,\Smarty_Internal_Template $smarty): void
     {
         if ($this->requestStack->getCurrentRequest()->hasSession()) {
             $postage = $this->requestStack->getCurrentRequest()->getSession()->get(TheliaGiftCard::GIFT_CARD_SESSION_POSTAGE);
