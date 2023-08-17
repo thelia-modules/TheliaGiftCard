@@ -188,8 +188,12 @@ class TheliaGiftCard extends AbstractPaymentModule
         return intval($osId);
     }
 
-    public static function getTotalCartGiftCardAmount(int $cartId): float
+    public static function getTotalCartGiftCardAmount(?int $cartId): float
     {
+        if (null === $cartId) {
+            return 0;
+        }
+
         try {
             $giftCards = GiftCardCartQuery::create()
                 ->select([GiftCardCartTableMap::COL_SPEND_AMOUNT, 'spend_amount'])
