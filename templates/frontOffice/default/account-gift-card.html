@@ -77,8 +77,8 @@
                             </td>
                             <td>{$CREATE_AT}</td>
                             <td>{$EXPIRATION_DATE}</td>
-                            <td>{format_money number=$AMOUNT currency_id=$CURRENCY}</td>
-                            <td>{format_money number=$SPEND_AMOUNT currency_id=$CURRENCY}</td>
+                            <td>{format_money number=$AMOUNT}</td>
+                            <td>{format_money number=$SPEND_AMOUNT}</td>
                             <td>
                                 {if $STATUS == 1}
                                     {if $EXPIRED == 1}

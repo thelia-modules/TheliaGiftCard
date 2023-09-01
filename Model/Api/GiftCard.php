@@ -33,7 +33,7 @@ class GiftCard extends BaseApiModel
      * )
      * @Constraint\NotBlank(groups={"create", "update"})
      */
-    protected int $sponsorCustomerId;
+    protected ?int $sponsorCustomerId;
 
     /**
      * @OA\Property(
@@ -47,21 +47,21 @@ class GiftCard extends BaseApiModel
      *    type="integer"
      * )
      */
-    protected int $orderId;
+    protected ?int $orderId;
 
     /**
      * @OA\Property(
      *    type="integer"
      * )
      */
-    protected int $productId;
+    protected ?int $productId;
 
     /**
      * @OA\Property(
      *    type="string"
      * )
      */
-    protected string $productName;
+    protected ?string $productName;
 
     /**
      * @OA\Property(
@@ -152,7 +152,7 @@ class GiftCard extends BaseApiModel
         $this->id = $id;
     }
 
-    public function getSponsorCustomerId(): int
+    public function getSponsorCustomerId(): ?int
     {
         return $this->sponsorCustomerId;
     }
@@ -172,7 +172,7 @@ class GiftCard extends BaseApiModel
         $this->beneficiaryCustomerId = $beneficiaryCustomerId;
     }
 
-    public function getOrderId(): int
+    public function getOrderId(): ?int
     {
         return $this->orderId;
     }
@@ -182,7 +182,7 @@ class GiftCard extends BaseApiModel
         $this->orderId = $orderId;
     }
 
-    public function getProductId(): int
+    public function getProductId(): ?int
     {
         return $this->productId;
     }
@@ -192,7 +192,7 @@ class GiftCard extends BaseApiModel
         $this->productId = $productId;
     }
 
-    public function getProductName(): string
+    public function getProductName(): ?string
     {
         return $this->productName;
     }

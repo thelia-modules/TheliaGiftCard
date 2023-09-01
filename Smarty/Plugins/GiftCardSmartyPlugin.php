@@ -112,9 +112,8 @@ class GiftCardSmartyPlugin extends AbstractSmartyPlugin
     public function isGiftCardProduct($params): bool
     {
         $productId = $params['product_id'];
-        $tabProductGiftCard = TheliaGiftCard::getGiftCardProductList();
 
-        if (in_array($productId, $tabProductGiftCard)) {
+        if (in_array($productId, TheliaGiftCard::getGiftCardProductList())) {
             return true;
         }
 

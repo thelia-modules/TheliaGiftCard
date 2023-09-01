@@ -12,6 +12,8 @@ use OpenApi\Model\Api\ModelFactory;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\Validator\Constraints\Json;
+use Thelia\Core\HttpFoundation\JsonResponse;
 use Thelia\Core\HttpFoundation\Request;
 use Thelia\Core\HttpFoundation\Response;
 use Thelia\Model\ConfigQuery;
@@ -78,12 +80,12 @@ class GiftCardListApiController extends BaseFrontOpenApiController
      * )
      * @throws PropelException|OpenApiException
      */
-    public function getGiftCards(Request $request, EventDispatcherInterface $dispatcher, ModelFactory $modelFactory): Response
+    public function getGiftCards(Request $request, EventDispatcherInterface $dispatcher, ModelFactory $modelFactory): JsonResponse
     {
         if ($this->cartHasGiftCard($request->getSession(), $dispatcher)) {
-            return $this->JsonResponse([]);
+            return new JsonResponse('');
         }
-        
+
         /** @var Customer $customer */
         $customer = $request->getSession()->getCustomerUser();
         $cart = $request->getSession()->getSessionCart($dispatcher);
@@ -126,15 +128,16 @@ class GiftCardListApiController extends BaseFrontOpenApiController
 
         $giftCards->groupby(GiftCardTableMap::COL_ID)->find();
 
-        return $this->jsonResponse(
-            json_encode(array_map(function (GiftCard $giftCard) use ($modelFactory) {
-                    /** @var OpenApiGiftCard $openGifCard */
-                    $openGifCard = $modelFactory->buildModel('GiftCard', $giftCard);
-                    $openGifCard->validate(self::GROUP_READ);
-                    return $openGifCard;
+        return new JsonResponse(
+            array_map(function (GiftCard $giftCard) use ($modelFactory) {
+                /** @var OpenApiGiftCard $openGifCard */
+                $openGifCard = $modelFactory->buildModel('GiftCard', $giftCard);
+                $openGifCard->validate(self::GROUP_READ);
+                return $openGifCard;
 
-                }, iterator_to_array($giftCards))
-            ));
+            }, iterator_to_array($giftCards)
+            )
+        );
     }
 
     public function cartHasGiftCard(Session $session, EventDispatcherInterface $dispatcher): bool

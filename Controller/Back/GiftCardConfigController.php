@@ -117,7 +117,7 @@ class GiftCardConfigController extends BaseAdminController
 
             return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/module/TheliaGiftCard'));
 
-        } catch (Exception) {
+        } catch (Exception $ex) {
             return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/module/TheliaGiftCard'));
         }
     }
