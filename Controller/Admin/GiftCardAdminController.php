@@ -6,7 +6,6 @@
 
 namespace TheliaGiftCard\Controller\Admin;
 
-use DateTime;
 use Propel\Runtime\Exception\PropelException;
 use Symfony\Component\HttpFoundation\Request;
 use Thelia\Controller\Admin\BaseAdminController;
@@ -83,7 +82,6 @@ class GiftCardAdminController extends BaseAdminController
 
         $giftCards = GiftCardQuery::create();
 
-        $this->applySearch($request, $giftCards);
         $this->applyOrder($request, $giftCards);
 
         if ($this->getOffset($request) && $this->getLength($request)) {
@@ -160,17 +158,5 @@ class GiftCardAdminController extends BaseAdminController
     {
         return $request->get('order') ?
             HookConfigurationManager::getdefineColumnsDefinition()[(int)$request->get('order')[0]['column']]['orm'] : null;
-    }
-
-    protected function applySearch(Request $request, GiftCardQuery $query): void
-    {
-        $value = $this->getSearchValue($request);
-
-        if (strlen($value) > 2) {
-            $query
-                ->filterByDescription('%' . $value . '%', Criteria::LIKE)
-                ->_or()
-                ->filterByAmount('%' . $value . '%', Criteria::LIKE);
-        }
     }
 }
