@@ -125,7 +125,8 @@ class GiftCardService
         $orderPostage = $this->getPostage($cart, $chosenDeliveryAddress, $order->getDeliveryModuleId());
         $total = $totalCartAmount + $orderPostage;
 
-        return $total == TheliaGiftCard::getTotalCartGiftCardAmount($cart->getId());
+        //Ugly fix cause wtf moment with float !!
+        return (string)$total == (string)TheliaGiftCard::getTotalCartGiftCardAmount($cart->getId());
     }
 
     /**
