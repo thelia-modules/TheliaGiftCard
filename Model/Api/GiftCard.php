@@ -94,17 +94,19 @@ class GiftCard extends BaseApiModel
 
     /**
      * @OA\Property(
-     *    type="\DateTime"
+     *    type="string",
+     *    format="date-time",
      * )
      */
-    protected ?DateTime $expirationDate;
+    protected ?string $expirationDate;
 
     /**
      * @OA\Property(
-     *    type="\DateTime"
+     *    type="string",
+     *    format="date-time",
      * )
      */
-    protected DateTime $createdAt;
+    protected string $createdAt;
 
     /**
      * @OA\Property(
@@ -242,24 +244,24 @@ class GiftCard extends BaseApiModel
         $this->status = $status;
     }
 
-    public function getExpirationDate(): DateTime
+    public function getExpirationDate(): string
     {
         return $this->expirationDate;
     }
 
     public function setExpirationDate(?DateTime $expirationDate = null): void
     {
-        $this->expirationDate = $expirationDate;
+        $this->expirationDate = $expirationDate->format("Y-m-d H:i:s");
     }
 
-    public function getCreatedAt(): DateTime
+    public function getCreatedAt(): string
     {
         return $this->createdAt;
     }
 
     public function setCreatedAt(DateTime $createdAt): void
     {
-        $this->createdAt = $createdAt;
+        $this->createdAt = $createdAt->format("Y-m-d H:i:s");
     }
 
     public function getCartspendAmount(): float
