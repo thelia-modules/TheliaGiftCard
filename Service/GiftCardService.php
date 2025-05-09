@@ -18,11 +18,15 @@ use Thelia\Log\Tlog;
 use Thelia\Model\Address;
 use Thelia\Model\AddressQuery;
 use Thelia\Model\Cart;
+use Thelia\Model\Lang;
+use Thelia\Model\Map\ProductI18nTableMap;
 use Thelia\Model\ModuleQuery;
 use Thelia\Module\Exception\DeliveryException;
 use TheliaGiftCard\Model\Base\GiftCardInfoCartQuery;
 use TheliaGiftCard\Model\GiftCard;
 use TheliaGiftCard\Model\GiftCardCartQuery;
+use TheliaGiftCard\Model\GiftCardQuery;
+use TheliaGiftCard\Model\Map\GiftCardCartTableMap;
 use TheliaGiftCard\Model\Map\GiftCardInfoCartTableMap;
 use TheliaGiftCard\Model\Map\GiftCardTableMap;
 use TheliaGiftCard\TheliaGiftCard;
@@ -157,4 +161,56 @@ class GiftCardService
 
         return round($postage, 2);
     }
+
+    public function getGiftCards(array $params = [], ?Lang $lang = null, ?Cart $cart = null)
+    {
+        $query = GiftCardQuery::create();
+
+        if ($lang !== null) {
+            $query->useProductQuery()
+                ->useProductI18nQuery(null, Criteria::LEFT_JOIN)
+                ->filterByLocale($lang->getLocale())
+                ->_or()
+                ->filterByLocale(null, Criteria::ISNULL)
+                ->endUse()
+                ->endUse()
+                ->withColumn(ProductI18nTableMap::TABLE_NAME . '.title', 'product_title');
+        }
+
+        if (isset($params['customer_id'])) {
+            $query->filterByBeneficiaryCustomerId($params['customer_id']);
+        }
+
+        if (!($params['expired'] ?? false)) {
+            $query->where(GiftCardTableMap::COL_SPEND_AMOUNT . ' < ' . GiftCardTableMap::COL_AMOUNT);
+        }
+
+        if (!($params['desactivate'] ?? true)) {
+            $query->filterByStatus(1);
+        }
+
+        if (isset($params['card_id'])) {
+            $query->filterById($params['card_id']);
+        }
+
+        if ($params['current_cart'] ?? false && $cart !== null) {
+            $join = new Join();
+            $join->addExplicitCondition(
+                GiftCardTableMap::TABLE_NAME,
+                'ID',
+                '',
+                GiftCardCartTableMap::TABLE_NAME,
+                'GIFT_CARD_ID'
+            );
+            $join->setJoinType(Criteria::LEFT_JOIN);
+            $query->addJoinObject($join, 'cart_join')
+                ->addJoinCondition('cart_join', GiftCardCartTableMap::COL_CART_ID . ' = ?', $cart->getId(), Criteria::EQUAL, PDO::PARAM_INT)
+                ->withColumn('SUM(' . GiftCardCartTableMap::COL_SPEND_AMOUNT . ')', 'CART_SPEND_AMOUNT');
+        }
+
+        $query->groupById();
+
+        return $query->find();
+    }
+
 }
