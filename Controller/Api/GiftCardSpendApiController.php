@@ -12,6 +12,7 @@ use Symfony\Component\Form\Extension\Core\Type\FormType;
 use Thelia\Core\Event\DefaultActionEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Core\HttpFoundation\JsonResponse;
+use Thelia\Core\HttpFoundation\Request;
 use Thelia\Core\HttpFoundation\Session\Session;
 use Thelia\Model\Cart;
 use TheliaGiftCard\Form\ConsumeGiftCart;
@@ -63,6 +64,7 @@ class GiftCardSpendApiController extends BaseFrontOpenApiController
      * )
      */
     public function spend(
+        Request                  $request,
         EventDispatcherInterface $dispatcher,
         Session                  $session,
         GiftCardSpend            $giftCardSpend
@@ -72,12 +74,26 @@ class GiftCardSpendApiController extends BaseFrontOpenApiController
         $cart = $session->getSessionCart();
         $restAmount = 0;
 
-        $form = $this->createForm(ConsumeGiftCart::getName(), FormType::class, [], ['csrf_protection' => false]);
+        $data = json_decode($request->getContent(), true);
 
-        $amountForm = $this->validateForm($form);
+        if (!isset($data['consume_gift_card'])) {
+            return new JsonResponse(
+                ['error' => 'Missing consume_gift_card data'],
+                400
+            );
+        }
 
-        $amount = $amountForm->get('amount_used')->getData();
-        $deliveryModuleId = $amountForm->get('delivery_module_id')->getData();
+        $consumeData = $data['consume_gift_card'];
+
+        if (!isset($consumeData['amount_used']) || !isset($consumeData['gift_card_codes'])) {
+            return new JsonResponse(
+                ['error' => 'Missing required fields: amount_used or gift_card_codes'],
+                400
+            );
+        }
+
+        $amount = (float) $consumeData['amount_used'];
+        $deliveryModuleId = $consumeData['delivery_module_id'] ?? null;
 
         //TODO: a mettre en configuration, en l'etat, aucun cumule avec les coupons
         $dispatcher->dispatch(new DefaultActionEvent(), TheliaEvents::COUPON_CLEAR_ALL);
@@ -88,7 +104,7 @@ class GiftCardSpendApiController extends BaseFrontOpenApiController
             return new JsonResponse(["Success"]);
         }
 
-        foreach ($amountForm->get('gift_card_codes')->getData() as $code) {
+        foreach ($consumeData['gift_card_codes'] as $code) {
             if ($restAmount > 0) {
                 $amount = $amount + $restAmount;
             }
