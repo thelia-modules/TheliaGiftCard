@@ -63,10 +63,25 @@ class GiftCardActivateApiController extends BaseFrontOpenApiController
      */
     public function activate(Request $request): Response
     {
-        $form = $this->createForm('activate_gift_card_to_customer', FormType::class, [], ['csrf_protection' => false]);
+        $data = json_decode($request->getContent(), true);
 
-        $codeForm = $this->validateForm($form);
-        $code = $codeForm->get('code_gift_card')->getData();
+        if (!isset($data['activate_gift_card_to_customer'])) {
+            return $this->jsonResponse(
+                json_encode(['error' => 'Missing activate_gift_card_to_customer data']),
+                400
+            );
+        }
+
+        $activateData = $data['activate_gift_card_to_customer'];
+
+        if (!isset($activateData['code_gift_card']) || empty($activateData['code_gift_card'])) {
+            return $this->jsonResponse(
+                json_encode(['error' => 'Missing required field: code_gift_card']),
+                400
+            );
+        }
+
+        $code = $activateData['code_gift_card'];
 
         $giftCard = GiftCardQuery::create()
             ->filterByCode($code)
