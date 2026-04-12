@@ -3,7 +3,7 @@
 namespace TheliaGiftCard\Controller\Api;
 
 use OpenApi\Annotations as OA;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 use OpenApi\Controller\Front\BaseFrontOpenApiController;
 
@@ -19,7 +19,6 @@ use TheliaGiftCard\Service\GiftCardSpend;
 
 /**
  * Class GiftCardListApiController
- * @Route("/open_api/gift-card", name="giftcards")
  */
 class GiftCardSpendApiController extends BaseFrontOpenApiController
 {
@@ -62,6 +61,7 @@ class GiftCardSpendApiController extends BaseFrontOpenApiController
      * )
      * )
      */
+    #[Route('/open_api/gift-card', name: 'giftcards')]
     public function spend(
         EventDispatcherInterface $dispatcher,
         Session                  $session,

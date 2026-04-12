@@ -19,11 +19,10 @@ use TheliaGiftCard\Hook\HookConfigurationManager;
 use Propel\Runtime\ActiveQuery\Criteria;
 
 use OpenApi\Annotations as OA;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 /**
  * Class GiftCardAdminController
- * @Route("/admin/module/theliagiftcard", name="gift_card_admin")
  */
 class GiftCardAdminController extends BaseAdminController
 {
@@ -31,6 +30,7 @@ class GiftCardAdminController extends BaseAdminController
      * @Route("/show/{code}", name="show_code")
      * @throws PropelException
      */
+    #[Route('/admin/module/theliagiftcard', name: 'gift_card_admin')]
     public function showGiftCard($code, Request $request): JsonResponse
     {
         $tab = [];
@@ -72,8 +72,8 @@ class GiftCardAdminController extends BaseAdminController
     }
 
     /**
-     * @Route("/show", name="show")
      */
+    #[Route('/show', name: 'show')]
     public function showGiftCardsList(Request $request): JsonResponse
     {
         $json = [

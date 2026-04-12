@@ -7,7 +7,7 @@
 namespace TheliaGiftCard\Controller\Back;
 
 use Exception;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 use Propel\Runtime\Exception\PropelException;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -32,13 +32,13 @@ use TheliaGiftCard\Model\GiftCardInfoCart;
 
 /**
  * Class GiftCardConfigController
- * @Route("/admin/module/theliagiftcard", name="gift_card_config")
  */
 class GiftCardConfigController extends BaseAdminController
 {
     /**
      * @Route("/config/save", name="edit_config")
      */
+    #[Route('/admin/module/theliagiftcard', name: 'gift_card_config')]
     public function editConfigAction(SecurityContext $securityContext, ParserContext $parserContext): RedirectResponse|Response
     {
         if (null === $this->checkAdmin($securityContext)) {
@@ -70,8 +70,8 @@ class GiftCardConfigController extends BaseAdminController
     }
 
     /**
-     * @Route("/config/send/pdf", name="config_send_pdf")
      */
+    #[Route('/config/send/pdf', name: 'config_send_pdf')]
     public function manualSendPdfAction(
         Request                  $request,
         TemplateHelperInterface  $templateHelper,
@@ -123,9 +123,9 @@ class GiftCardConfigController extends BaseAdminController
     }
 
     /**
-     * @Route("/generate-gift-card", name="generate_gift_card")
      * @throws PropelException
      */
+    #[Route('/generate-gift-card', name: 'generate_gift_card')]
     public function generateGiftCardAction(ParserContext $parserContext, SecurityContext $securityContext): RedirectResponse|Response
     {
         if (null === $this->checkAdmin($securityContext)) {
@@ -171,9 +171,9 @@ class GiftCardConfigController extends BaseAdminController
     }
 
     /**
-     * @Route("/activate", name="activate_gift_card")
      * @throws PropelException
      */
+    #[Route('/activate', name: 'activate_gift_card')]
     public function activateGiftCardAction(Request $request, SecurityContext $securityContext): RedirectResponse|Response
     {
         if (null === $this->checkAdmin($securityContext)) {
@@ -194,9 +194,9 @@ class GiftCardConfigController extends BaseAdminController
     }
 
     /**
-     * @Route("/edit-gift-card", name="edit_gift_card")
      * @throws PropelException
      */
+    #[Route('/edit-gift-card', name: 'edit_gift_card')]
     public function editGiftCardAction(ParserContext $parserContext, SecurityContext $securityContext): RedirectResponse|Response
     {
         if (null === $this->checkAdmin($securityContext)) {
@@ -243,8 +243,8 @@ class GiftCardConfigController extends BaseAdminController
     }
 
     /**
-     * @Route("/deactivate", name="deactivate_gift_card")
      */
+    #[Route('/deactivate', name: 'deactivate_gift_card')]
     public function deactivateGiftCard(Request $request, SecurityContext $securityContext): RedirectResponse|Response
     {
         if (null === $this->checkAdmin($securityContext)) {

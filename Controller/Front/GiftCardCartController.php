@@ -16,17 +16,17 @@ use Thelia\Core\Event\Cart\CartEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Model\ProductSaleElementsQuery;
 use TheliaGiftCard\Model\GiftCardInfoCart;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 /**
  * Class GiftCardController
- * @Route("/gift-card/cart", name="buy_gift_card")
  */
 class GiftCardCartController extends BaseFrontController
 {
     /**
      * @Route("/add", name="buy_gift_card_to_cart")
      */
+    #[Route('/gift-card/cart', name: 'buy_gift_card')]
     public function saveInfoAction(Session $session, EventDispatcherInterface $dispatcher): RedirectResponse|Response
     {
         $form = $this->createForm('save_gift_card_info');

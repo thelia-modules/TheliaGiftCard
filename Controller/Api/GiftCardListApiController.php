@@ -3,7 +3,7 @@
 namespace TheliaGiftCard\Controller\Api;
 
 use OpenApi\Annotations as OA;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 use OpenApi\Exception\OpenApiException;
 use Propel\Runtime\Exception\PropelException;
@@ -28,7 +28,6 @@ use TheliaGiftCard\TheliaGiftCard;
 
 /**
  * Class GiftCardListApiController
- * @Route("/open_api/gift-card", name="giftcards-spend")
  */
 class GiftCardListApiController extends BaseFrontOpenApiController
 {
@@ -80,6 +79,7 @@ class GiftCardListApiController extends BaseFrontOpenApiController
      * )
      * @throws PropelException|OpenApiException
      */
+    #[Route('/open_api/gift-card', name: 'giftcards-spend')]
     public function getGiftCards(Request $request, EventDispatcherInterface $dispatcher, ModelFactory $modelFactory): JsonResponse
     {
         if ($this->cartHasGiftCard($request->getSession(), $dispatcher)) {

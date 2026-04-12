@@ -4,7 +4,7 @@ namespace TheliaGiftCard\Controller\Api;
 
 use Exception;
 use OpenApi\Annotations as OA;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 use OpenApi\Controller\Front\BaseFrontOpenApiController;
 use Propel\Runtime\ActiveQuery\Criteria;
@@ -18,7 +18,6 @@ use TheliaGiftCard\TheliaGiftCard;
 
 /**
  * Class GiftCardActivateApiController
- * @Route("/open_api/gift-card", name="giftcards")
  */
 class GiftCardActivateApiController extends BaseFrontOpenApiController
 {
@@ -61,6 +60,7 @@ class GiftCardActivateApiController extends BaseFrontOpenApiController
      * )
      * @throws Exception
      */
+    #[Route('/open_api/gift-card', name: 'giftcards')]
     public function activate(Request $request): Response
     {
         $form = $this->createForm('activate_gift_card_to_customer', FormType::class, [], ['csrf_protection' => false]);
