@@ -1,0 +1,50 @@
+{# Gift Card configuration modal — form: gift_card_config #}
+<div class="modal fade" id="config_card_gift_dialog" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="/admin/module/theliagiftcard/config/save" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ 'Configuration'|trans({}, 'theliagiftcard.bo.default') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {{ form_errors(form) }}
+
+                    {{ form_widget(form.success_url, { value: app.request.uri }) }}
+
+                    <div class="mb-3 form-check form-switch">
+                        <input type="checkbox" class="form-check-input" id="gift_card_auto_send"
+                               name="{{ form.vars.full_name }}[gift_card_auto_send]" value="1"
+                               {{ thelia_config('gift_card_mode', false) ? 'checked' : '' }}>
+                        <label class="form-check-label" for="gift_card_auto_send">
+                            {{ 'Activate auto send gift card by email'|trans({}, 'theliagiftcard.bo.default') }}
+                        </label>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form_label(form.gift_card_category) }}
+                            {{ form_widget(form.gift_card_category, { attr: { class: 'form-select' } }) }}
+                            {{ form_errors(form.gift_card_category) }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form_label(form.gift_card_paid_status) }}
+                            {{ form_widget(form.gift_card_paid_status, { attr: { class: 'form-select' } }) }}
+                            {{ form_errors(form.gift_card_paid_status) }}
+                        </div>
+                    </div>
+                    {% do form.gift_card_auto_send.setRendered %}
+                    {{ form_rest(form) }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        {{ 'Annuler'|trans({}, 'theliagiftcard.bo.default') }}
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        {{ 'Sauvegarder'|trans({}, 'theliagiftcard.bo.default') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

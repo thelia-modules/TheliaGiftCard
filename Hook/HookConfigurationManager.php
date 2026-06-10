@@ -7,8 +7,15 @@
 namespace TheliaGiftCard\Hook;
 
 use Propel\Runtime\Exception\PropelException;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Event\Hook\HookRenderEvent;
+use Thelia\Core\Form\TheliaFormFactory;
 use Thelia\Core\Hook\BaseHook;
+use Thelia\Core\Template\Parser\ParserResolver;
+use TheliaGiftCard\Form\Config\GiftCardConfigForm;
+use TheliaGiftCard\Form\Config\ManualyCreateGiftCard;
+use TheliaGiftCard\Form\Config\ManualyEditGiftCard;
+use TheliaGiftCard\Form\GiftCardCustomerEmailForm;
 use TheliaGiftCard\TheliaGiftCard;
 use TheliaGiftCard\Model\Map\GiftCardTableMap;
 use TheliaGiftCard\Model\GiftCardQuery;
@@ -17,6 +24,26 @@ use Thelia\Core\Translation\Translator;
 
 class HookConfigurationManager extends BaseHook
 {
+    public function __construct(
+        private readonly TheliaFormFactory $formFactory,
+        ?EventDispatcherInterface $dispatcher = null,
+        ?ParserResolver $parserResolver = null,
+    ) {
+        parent::__construct($dispatcher, $parserResolver);
+    }
+
+    public static function getSubscribedHooks(): array
+    {
+        return [
+            'module.configuration' => [
+                ['type' => 'back', 'method' => 'onConfiguration'],
+            ],
+            'module.config-js' => [
+                ['type' => 'back', 'method' => 'onProductEditJs'],
+            ],
+        ];
+    }
+
     /**
      * @throws PropelException
      */
@@ -61,22 +88,30 @@ class HookConfigurationManager extends BaseHook
             $allInfo['languages'][] = $lang;
         }
 
+        $configForm = $this->formFactory->createForm(GiftCardConfigForm::getName());
+        $createForm = $this->formFactory->createForm(ManualyCreateGiftCard::getName());
+        $editForm = $this->formFactory->createForm(ManualyEditGiftCard::getName());
+        $emailForm = $this->formFactory->createForm(GiftCardCustomerEmailForm::getName());
+
         $event->add(
-            $this->render("gift-card-config.html",
+            $this->render("TheliaGiftCard/gift-card-config.html.twig",
                 [
                     'all_info' => $allInfo,
-                    'columnsDefinitionTransaction' => $this->defineColumnsDefinition()
+                    'columnsDefinitionTransaction' => $this->defineColumnsDefinition(),
+                    'config_form' => $configForm->createView()->getView(),
+                    'create_form' => $createForm->createView()->getView(),
+                    'edit_form' => $editForm->createView()->getView(),
+                    'email_form' => $emailForm->createView()->getView(),
                 ]
             )
         );
-        $event->add($this->addCSS('assets/css/style.css'));
     }
 
     public function onProductEditJs(HookRenderEvent $event): void
     {
         $event->add(
             $this->render(
-                "datatable.js.html"
+                "TheliaGiftCard/datatable.js.html.twig"
             )
         );
     }

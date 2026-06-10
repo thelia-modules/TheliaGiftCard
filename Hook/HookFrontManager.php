@@ -14,6 +14,21 @@ use TheliaGiftCard\TheliaGiftCard;
 
 class HookFrontManager extends BaseHook
 {
+    public static function getSubscribedHooks(): array
+    {
+        return [
+            'account.bottom' => [
+                ['type' => 'front', 'method' => 'onAccountBottom'],
+            ],
+            'product.bottom' => [
+                ['type' => 'front', 'method' => 'onProductAdditional'],
+            ],
+            'order-invoice.giftcard-form' => [
+                ['type' => 'front', 'method' => 'onOrderInvoiceBottom'],
+            ],
+        ];
+    }
+
     public function onAccountBottom(HookRenderEvent $event): void
     {
         $category = CategoryQuery::create()->findPk(TheliaGiftCard::getGiftCardCategoryId());

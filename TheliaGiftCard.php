@@ -16,7 +16,7 @@ use Thelia\Core\Event\Template\TemplateCreateEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Core\Template\TemplateDefinition;
 use Thelia\Core\Translation\Translator;
-use Thelia\Install\Database;
+use Thelia\Core\Install\Database;
 use Thelia\Model\AddressQuery;
 use Thelia\Model\Base\FeatureTemplateQuery;
 use Thelia\Model\Base\ModuleConfig;
@@ -317,8 +317,13 @@ class TheliaGiftCard extends AbstractPaymentModule
     public static function configureServices(ServicesConfigurator $servicesConfigurator): void
     {
         $servicesConfigurator->load(self::getModuleCode() . '\\', __DIR__)
-            ->exclude([THELIA_MODULE_DIR . ucfirst(self::getModuleCode()) . "/I18n/*"])
-            ->autowire()
-            ->autoconfigure();
+            ->exclude([
+                __DIR__ . '/I18n/*',
+                __DIR__ . '/Config/**/*.php',
+                __DIR__ . '/Model/Map/*',
+                __DIR__ . '/TheliaGiftCard.php',
+            ])
+            ->autowire(true)
+            ->autoconfigure(true);
     }
 }

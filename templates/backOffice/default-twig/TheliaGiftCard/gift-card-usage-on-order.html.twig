@@ -1,0 +1,22 @@
+{# order-edit.after-order-product-list hook fragment — gift card amounts used on this order #}
+<div class="card mb-3">
+    <div class="card-header">
+        {{ 'Order Gift-Card amount usage for this order'|trans({}, 'theliagiftcard.bo.default') }}
+    </div>
+    <div class="card-body table-responsive">
+        <ul class="list-unstyled">
+            {% for line in lines %}
+                <li>
+                    {{ 'Montant Carte Cadeau %code : %amount'|trans({
+                        '%code': line.code,
+                        '%amount': line.spend_amount|number_format(2, '.', ' ') ~ ' ' ~ currency_symbol
+                    }, 'theliagiftcard') }}
+                </li>
+            {% endfor %}
+            <h3>
+                {{ 'Total payé en carte cadeau'|trans({}, 'theliagiftcard') }} :
+                {{ total_spend_amount|number_format(2, '.', ' ') }} {{ currency_symbol }}
+            </h3>
+        </ul>
+    </div>
+</div>

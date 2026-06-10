@@ -4,7 +4,8 @@
   "type": "thelia-module",
   "require": {
     "thelia/installer": "~1.1",
-    "zircote/swagger-php": "^4.0"
+    "zircote/swagger-php": "^4.0",
+    "thelia/open-api-module": "dev-twig"
   },
   "extra": {
     "installer-name": "TheliaGiftCard"
