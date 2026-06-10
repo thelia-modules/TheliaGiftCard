@@ -6,6 +6,7 @@
 
 namespace TheliaGiftCard\Loop;
 
+use Propel\Runtime\ActiveQuery\ModelCriteria;
 use Thelia\Core\Template\Element\BaseLoop;
 use Thelia\Core\Template\Element\LoopResult;
 use Thelia\Core\Template\Element\LoopResultRow;
@@ -24,13 +25,13 @@ class GiftCardOrderList extends BaseLoop implements PropelSearchLoopInterface
         );
     }
 
-    public function buildModelCriteria()
+    public function buildModelCriteria(): ModelCriteria
     {
         return GiftCardOrderQuery::create()
         ->filterByOrderId($this->getOrderId());
     }
 
-    public function parseResults(LoopResult $loopResult)
+    public function parseResults(LoopResult $loopResult): LoopResult
     {
         /** @var GiftCardOrder $giftOrderCard */
         foreach ($loopResult->getResultDataCollection() as $giftOrderCard) {
