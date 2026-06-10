@@ -25,6 +25,7 @@ use Thelia\Model\CategoryQuery;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\FeatureQuery;
 use Thelia\Model\FeatureTemplate;
+use Thelia\Model\Lang;
 use Thelia\Model\ModuleConfigQuery;
 use Thelia\Model\Order;
 use Thelia\Model\OrderStatusQuery;
@@ -89,7 +90,10 @@ class TheliaGiftCard extends AbstractPaymentModule
             $database = new Database($con);
             $database->insertSql(null, [__DIR__ . "/Config/TheliaMain.sql"]);
         }
-        $locale = $this->getRequest()->getSession()->getLang()->getLocale();
+        $request = $this->getContainer()->get('request_stack')->getCurrentRequest();
+        $locale = ($request && $request->hasSession() && $request->getSession()->getLang())
+            ? $request->getSession()->getLang()->getLocale()
+            : Lang::getDefaultLanguage()->getLocale();
 
         $this->handleGiftCardTemplate($locale);
     }
