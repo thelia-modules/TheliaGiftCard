@@ -35,6 +35,7 @@ use Thelia\Module\AbstractPaymentModule;
 use TheliaGiftCard\Model\GiftCardCartQuery;
 use TheliaGiftCard\Model\GiftCardQuery;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
+use Symfony\Component\HttpFoundation\Response;
 use TheliaGiftCard\Model\Map\GiftCardCartTableMap;
 use TheliaGiftCard\Service\GiftCardService;
 use TheliaGiftCard\Service\GiftCardSpend;
@@ -158,11 +159,13 @@ class TheliaGiftCard extends AbstractPaymentModule
         return $giftCardService->isGiftCardPayment();
     }
 
-    public function pay(Order $order): void
+    public function pay(Order $order): ?Response
     {
         $event = new OrderEvent($order);
         $event->setStatus(OrderStatusQuery::getPaidStatus()->getId());
         $this->getDispatcher()->dispatch($event, TheliaEvents::ORDER_UPDATE_STATUS);
+
+        return null;
     }
 
     public function manageStockOnCreation(): bool
