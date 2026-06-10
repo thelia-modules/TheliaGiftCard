@@ -32,7 +32,6 @@ use Thelia\Model\ProductCategory;
 use Thelia\Model\ProductCategoryQuery;
 use Thelia\Model\TemplateQuery;
 use Thelia\Module\AbstractPaymentModule;
-use Thelia\TaxEngine\TaxEngine;
 use TheliaGiftCard\Model\GiftCardCartQuery;
 use TheliaGiftCard\Model\GiftCardQuery;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;

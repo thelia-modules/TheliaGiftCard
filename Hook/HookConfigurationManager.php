@@ -107,11 +107,57 @@ class HookConfigurationManager extends BaseHook
         );
     }
 
+    /**
+     * @throws PropelException
+     */
     public function onProductEditJs(HookRenderEvent $event): void
     {
+        $giftCards = GiftCardQuery::create()->find();
+        $allInfo = [
+            'orders' => [],
+            'sponsor_customers' => [],
+            'beneficiary_customers' => [],
+            'languages' => [],
+        ];
+
+        foreach ($giftCards as $giftCard) {
+            $beneficiaryCustomer = $giftCard->getCustomerRelatedByBeneficiaryCustomerId();
+            if ($beneficiaryCustomer !== null) {
+                $fullName = $beneficiaryCustomer->getFirstname() . ' ' . $beneficiaryCustomer->getLastname();
+                $allInfo['beneficiary_customers'][$giftCard->getBeneficiaryCustomerId()] = $fullName;
+            }
+
+            $sponsorCustomer = $giftCard->getCustomerRelatedBySponsorCustomerId();
+            if ($sponsorCustomer !== null) {
+                $fullName = $sponsorCustomer->getFirstname() . ' ' . $sponsorCustomer->getLastname();
+                $allInfo['sponsor_customers'][$giftCard->getSponsorCustomerId()] = $fullName;
+            }
+
+            $order = $giftCard->getOrder();
+            if ($order !== null) {
+                $allInfo['orders'][$giftCard->getOrderId()] = $order->getRef();
+            }
+        }
+
+        $languages = LangQuery::create()
+            ->filterByActive(1)
+            ->find();
+
+        foreach ($languages as $language) {
+            $allInfo['languages'][] = [
+                'locale' => $language->getLocale(),
+                'code' => $language->getCode(),
+                'title' => $language->getTitle(),
+            ];
+        }
+
         $event->add(
             $this->render(
-                "TheliaGiftCard/datatable.js.html.twig"
+                "TheliaGiftCard/datatable.js.html.twig",
+                [
+                    'all_info' => $allInfo,
+                    'columnsDefinitionTransaction' => $this->defineColumnsDefinition(),
+                ]
             )
         );
     }
