@@ -56,7 +56,10 @@ class GiftCardAdminController extends BaseAdminController
         foreach ($ordersGiftCard as $orderGiftCard) {
             $orderModel = $orderGiftCard->getOrder();
             $date = $orderGiftCard->getCreatedAt();
-            $orderStatus = $orderModel->getOrderStatus()->setLocale($request->getSession()->getLang()->getLocale())->getTitle();
+            $locale = $request->hasSession()
+                ? $request->getSession()->getLang()->getLocale()
+                : (\Thelia\Model\LangQuery::create()->findOneByByDefault(true)?->getLocale() ?? 'en_US');
+            $orderStatus = $orderModel->getOrderStatus()->setLocale($locale)->getTitle();
 
             $orders[] = [
                 'ORDER_REF' => $orderGiftCard->getOrder()->getRef(),
@@ -121,22 +124,23 @@ class GiftCardAdminController extends BaseAdminController
 
     protected function getLength(Request $request): int
     {
-        return (int)$request->get('length');
+        return (int)$request->attributes->get('length', $request->query->get('length', $request->request->get('length')));
     }
 
     protected function getOffset(Request $request): int
     {
-        return (int)$request->get('start');
+        return (int)$request->attributes->get('start', $request->query->get('start', $request->request->get('start')));
     }
 
     protected function getSearchValue(Request $request): ?string
     {
-        return $request->get('search') ? (string)$request->get('search')['value'] : null;
+        $search = $request->attributes->get('search', $request->query->get('search', $request->request->get('search')));
+        return $search ? (string)$search['value'] : null;
     }
 
     protected function getOrderDir(Request $request): ?string
     {
-        $order = $request->get('order');
+        $order = $request->attributes->get('order', $request->query->get('order', $request->request->get('order')));
         if (null === $order) {
             return null;
         }
@@ -156,7 +160,8 @@ class GiftCardAdminController extends BaseAdminController
 
     protected function getOrderColumnName(Request $request)
     {
-        return $request->get('order') ?
-            HookConfigurationManager::getdefineColumnsDefinition()[(int)$request->get('order')[0]['column']]['orm'] : null;
+        $order = $request->attributes->get('order', $request->query->get('order', $request->request->get('order')));
+        return $order ?
+            HookConfigurationManager::getdefineColumnsDefinition()[(int)$order[0]['column']]['orm'] : null;
     }
 }

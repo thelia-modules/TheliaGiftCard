@@ -39,8 +39,13 @@ class PaymentListener implements EventSubscriberInterface
 
     public function handleGiftCard(OrderPayTotalEvent $event): void
     {
+        $request = $this->requestStack->getCurrentRequest();
+        if (null === $request || !$request->hasSession()) {
+            return;
+        }
+
         /** @var Cart $cart */
-        $cart = $this->requestStack->getCurrentRequest()->getSession()->getSessionCart();
+        $cart = $request->getSession()->getSessionCart();
 
         if ($event->getTotal() > $totalGiftCardAmount = TheliaGiftCard::getTotalCartGiftCardAmount($cart->getId())) {
             $event->setTotal($event->getTotal() - $totalGiftCardAmount);

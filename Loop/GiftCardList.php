@@ -72,7 +72,10 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
         $desactivate = $this->getDesactivate();
         $currentCart = $this->getCurrentCart();
 
-        $locale = $this->getCurrentRequest()->getSession()->getLang()->getLocale();
+        $request = $this->getCurrentRequest();
+        $locale = $request->hasSession()
+            ? $request->getSession()->getLang()->getLocale()
+            : (\Thelia\Model\LangQuery::create()->findOneByByDefault(true)?->getLocale() ?? 'en_US');
 
         $search = GiftCardQuery::create()
             ->useProductQuery('')
@@ -115,7 +118,7 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
         $search->groupby(GiftCardTableMap::COL_ID);
 
         if ($currentCart) {
-            $cart = $this->getCurrentRequest()->getSession()->getSessionCart();
+            $cart = $request->hasSession() ? $request->getSession()->getSessionCart() : null;
 
             if ($cart === null) {
                 return $search;

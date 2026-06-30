@@ -34,6 +34,9 @@ class GiftCardSpend
     public function spendGiftCard(string $code, float $amount, int $deliveryModuleId): float
     {
         $request = $this->requestStack->getCurrentRequest();
+        if (null === $request || !$request->hasSession()) {
+            throw new Exception(Translator::getInstance()->trans("Missing parameter !", [], TheliaGiftCard::DOMAIN_NAME));
+        }
         $session = $request->getSession();
 
         /** @var Customer $customer */

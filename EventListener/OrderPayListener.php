@@ -48,7 +48,11 @@ class OrderPayListener implements EventSubscriberInterface
     public function onOrderPayGiftCard(OrderEvent $event): void
     {
         $order = $event->getPlacedOrder();
-        $cart = $this->request->getSession()->getSessionCart();
+        $request = $this->request->getCurrentRequest();
+        if (null === $request || !$request->hasSession()) {
+            return;
+        }
+        $cart = $request->getSession()->getSessionCart();
         $cartId = $cart->getId();
 
         $cartGiftCards = GiftCardCartQuery::create()
@@ -109,7 +113,11 @@ class OrderPayListener implements EventSubscriberInterface
 
         $order = $event->getPlacedOrder();
 
-        $cartId = $this->request->getSession()->getSessionCart()->getId();
+        $request = $this->request->getCurrentRequest();
+        if (null === $request || !$request->hasSession()) {
+            return;
+        }
+        $cartId = $request->getSession()->getSessionCart()->getId();
 
         $cartNewGiftCards = GiftCardInfoCartQuery::create()
             ->filterByCartId($cartId)
