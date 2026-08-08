@@ -3,9 +3,7 @@
   "license": "GPL-3.0-or-later",
   "type": "thelia-module",
   "require": {
-    "thelia/installer": "^1.6",
-    "zircote/swagger-php": "^4.0",
-    "thelia/open-api-module": "dev-twig"
+    "thelia/installer": "^1.6"
   },
   "extra": {
     "installer-name": "TheliaGiftCard"

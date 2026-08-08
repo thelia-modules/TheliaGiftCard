@@ -13,7 +13,6 @@ use Thelia\Mailer\MailerFactory;
 use Thelia\Model\ConfigQuery;
 use Thelia\Tools\URL;
 
-use OpenApi\Annotations as OA;
 use Symfony\Component\Routing\Attribute\Route;
 
 use TheliaGiftCard\Service\GiftCardEmailService;

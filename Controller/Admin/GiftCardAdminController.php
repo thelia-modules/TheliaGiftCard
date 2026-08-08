@@ -18,7 +18,6 @@ use Thelia\Core\HttpFoundation\JsonResponse;
 use TheliaGiftCard\Hook\HookConfigurationManager;
 use Propel\Runtime\ActiveQuery\Criteria;
 
-use OpenApi\Annotations as OA;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
