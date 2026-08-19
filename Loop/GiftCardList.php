@@ -118,7 +118,7 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
         $search->groupby(GiftCardTableMap::COL_ID);
 
         if ($currentCart) {
-            $cart = $request->hasSession() ? $request->getSession()->getSessionCart() : null;
+            $cart = $request->hasSession() ? $request->getSession()->getSessionCart($this->dispatcher) : null;
 
             if ($cart === null) {
                 return $search;

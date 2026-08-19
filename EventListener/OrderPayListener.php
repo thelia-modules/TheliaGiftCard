@@ -9,6 +9,7 @@ namespace TheliaGiftCard\EventListener;
 use DateTime;
 use Exception;
 use Propel\Runtime\Exception\PropelException;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Event\Order\OrderEvent;
@@ -30,7 +31,8 @@ class OrderPayListener implements EventSubscriberInterface
     public function __construct(
         protected RequestStack            $request,
         protected GiftCardService         $giftCardService,
-        protected GiftCardGenerateService $giftCardGenerateService
+        protected GiftCardGenerateService $giftCardGenerateService,
+        protected EventDispatcherInterface $dispatcher
     )
     {}
 
@@ -52,7 +54,7 @@ class OrderPayListener implements EventSubscriberInterface
         if (null === $request || !$request->hasSession()) {
             return;
         }
-        $cart = $request->getSession()->getSessionCart();
+        $cart = $request->getSession()->getSessionCart($this->dispatcher);
         $cartId = $cart->getId();
 
         $cartGiftCards = GiftCardCartQuery::create()
@@ -117,7 +119,7 @@ class OrderPayListener implements EventSubscriberInterface
         if (null === $request || !$request->hasSession()) {
             return;
         }
-        $cartId = $request->getSession()->getSessionCart()->getId();
+        $cartId = $request->getSession()->getSessionCart($this->dispatcher)->getId();
 
         $cartNewGiftCards = GiftCardInfoCartQuery::create()
             ->filterByCartId($cartId)

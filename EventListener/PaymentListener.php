@@ -2,6 +2,7 @@
 
 namespace TheliaGiftCard\EventListener;
 
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Event\Order\OrderPayTotalEvent;
@@ -15,7 +16,8 @@ class PaymentListener implements EventSubscriberInterface
 {
     public function __construct(
         protected RequestStack $requestStack,
-        protected GiftCardService $giftCardService
+        protected GiftCardService $giftCardService,
+        protected EventDispatcherInterface $dispatcher
     )
     {
     }
@@ -45,7 +47,7 @@ class PaymentListener implements EventSubscriberInterface
         }
 
         /** @var Cart $cart */
-        $cart = $request->getSession()->getSessionCart();
+        $cart = $request->getSession()->getSessionCart($this->dispatcher);
 
         if ($event->getTotal() > $totalGiftCardAmount = TheliaGiftCard::getTotalCartGiftCardAmount($cart->getId())) {
             $event->setTotal($event->getTotal() - $totalGiftCardAmount);

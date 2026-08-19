@@ -4,6 +4,7 @@ namespace TheliaGiftCard\Service;
 
 use Exception;
 use Propel\Runtime\Exception\PropelException;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Translation\Translator;
 use Thelia\Model\Address;
@@ -21,7 +22,8 @@ class GiftCardSpend
 {
     public function __construct(
         private readonly RequestStack $requestStack,
-        private readonly GiftCardService $giftCardService
+        private readonly GiftCardService $giftCardService,
+        private readonly EventDispatcherInterface $dispatcher
     )
     {
 
@@ -43,7 +45,7 @@ class GiftCardSpend
         $customer = $session->getCustomerUser();
 
         /** @var Cart $cart */
-        $cart = $session->getSessionCart();
+        $cart = $session->getSessionCart($this->dispatcher);
 
         /** @var Order $order */
         $order = $session->getOrder();

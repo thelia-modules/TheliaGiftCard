@@ -98,7 +98,7 @@ class GiftCardService
             if (null === $request || !$request->hasSession()) {
                 return;
             }
-            $cartId = $request->getSession()->getSessionCart()->getId();
+            $cartId = $request->getSession()->getSessionCart($this->dispatcher)->getId();
 
             GiftCardCartQuery::create()
                 ->filterByCartId($cartId)
@@ -117,7 +117,7 @@ class GiftCardService
         }
 
         /** @var Cart $cart */
-        $cart = $request->getSession()->getSessionCart();
+        $cart = $request->getSession()->getSessionCart($this->dispatcher);
         $order = $request->getSession()->getOrder();
 
         if (!$order->getDeliveryModuleId()) {
