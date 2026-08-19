@@ -1,0 +1,143 @@
+/* Styles for the gift-card blocks injected into a Twig front-office theme.
+   Module-owned on purpose: the Flexy theme builds its Tailwind stylesheet by scanning its own
+   directories, so utility classes written in a module template would never be compiled. Colours
+   and fonts are inherited from the theme instead of being redeclared, so the block blends in. */
+
+.theliaGiftCard {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 2.5rem auto;
+    padding: 1.5rem;
+    max-width: 72rem;
+    border: 1px solid currentColor;
+    border-radius: 0.5rem;
+    color: inherit;
+    font: inherit;
+}
+
+.theliaGiftCard_title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.theliaGiftCard_subtitle {
+    margin: 1rem 0 0;
+    font-size: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.theliaGiftCard_form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.theliaGiftCard_fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+    width: 100%;
+}
+
+.theliaGiftCard_field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* The two-column row of the product form. `flex` is set here and not on the field itself: the
+   form is a column flex container, where a flex-basis would be read as a height. */
+.theliaGiftCard_fields > .theliaGiftCard_field {
+    flex: 1 1 16rem;
+}
+
+/* A field and its submit button side by side, wrapping under each other when there is no room. */
+.theliaGiftCard_inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    align-items: flex-end;
+}
+
+.theliaGiftCard_inline > .theliaGiftCard_field {
+    flex: 0 1 18rem;
+}
+
+.theliaGiftCard_label {
+    font-size: 0.875rem;
+}
+
+.theliaGiftCard_input,
+.theliaGiftCard_textarea {
+    padding: 0.5rem 0.75rem;
+    width: 100%;
+    border: 1px solid currentColor;
+    border-radius: 0.25rem;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+}
+
+.theliaGiftCard_textarea {
+    resize: vertical;
+}
+
+.theliaGiftCard_button {
+    align-self: flex-start;
+    padding: 0.5rem 1.25rem;
+    border: 1px solid currentColor;
+    border-radius: 0.25rem;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.theliaGiftCard_error {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.theliaGiftCard_empty {
+    margin: 0;
+}
+
+.theliaGiftCard_link {
+    text-decoration: underline;
+}
+
+/* The table scrolls inside its own box: seven columns do not fit a phone screen, and the page
+   itself must never scroll sideways. */
+.theliaGiftCard_tableWrapper {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.theliaGiftCard_table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+/* The table already has a visible heading above it; the caption exists for screen readers, which
+   announce it as the table's name. */
+.theliaGiftCard_caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.theliaGiftCard_table th,
+.theliaGiftCard_table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid currentColor;
+    white-space: nowrap;
+}
