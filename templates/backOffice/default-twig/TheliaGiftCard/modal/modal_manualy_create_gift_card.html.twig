@@ -1,0 +1,66 @@
+{# Create a gift card modal — form: manualy_create_gift_card #}
+<div class="modal fade" id="manualy_create_card_gift_dialog" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="/admin/module/theliagiftcard/generate-gift-card" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ 'Create a new gift card'|trans({}, 'theliagiftcard.bo.default') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h4>{{ 'Gift Card Informations'|trans({}, 'theliagiftcard.bo.default') }}</h4>
+
+                    {{ form_errors(form) }}
+
+                    {{ form_widget(form.success_url, { value: app.request.uri }) }}
+
+                    <div class="row">
+                        <div class="col-sm-6 mb-3">
+                            {{ form_label(form.sponsor_name) }}
+                            {{ form_widget(form.sponsor_name, { attr: { class: 'form-control' } }) }}
+                            {{ form_errors(form.sponsor_name) }}
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            {{ form_label(form.beneficiary_name) }}
+                            {{ form_widget(form.beneficiary_name, { attr: { class: 'form-control' } }) }}
+                            {{ form_errors(form.beneficiary_name) }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12 mb-3">
+                            {{ form_label(form.beneficiary_address) }}
+                            {{ form_widget(form.beneficiary_address, { attr: { class: 'form-control' } }) }}
+                            {{ form_errors(form.beneficiary_address) }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12 mb-3">
+                            {{ form_label(form.beneficiary_message) }}
+                            {{ form_widget(form.beneficiary_message, { attr: { class: 'form-control' } }) }}
+                            {{ form_errors(form.beneficiary_message) }}
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            {{ form_label(form.expiration_date) }}
+                            {{ form_widget(form.expiration_date, { attr: { class: 'form-control' } }) }}
+                            {{ form_errors(form.expiration_date) }}
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            {{ form_label(form.amount) }}
+                            {{ form_widget(form.amount, { attr: { class: 'form-control', step: 'any' } }) }}
+                            {{ form_errors(form.amount) }}
+                        </div>
+                    </div>
+                    {{ form_rest(form) }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        {{ 'Cancel'|trans({}, 'theliagiftcard.bo.default') }}
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        {{ 'Generate'|trans({}, 'theliagiftcard.bo.default') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

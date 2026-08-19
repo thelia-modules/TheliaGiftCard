@@ -16,7 +16,7 @@ use Thelia\Core\Event\Template\TemplateCreateEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Core\Template\TemplateDefinition;
 use Thelia\Core\Translation\Translator;
-use Thelia\Install\Database;
+use Thelia\Core\Install\Database;
 use Thelia\Model\AddressQuery;
 use Thelia\Model\Base\FeatureTemplateQuery;
 use Thelia\Model\Base\ModuleConfig;
@@ -25,6 +25,7 @@ use Thelia\Model\CategoryQuery;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\FeatureQuery;
 use Thelia\Model\FeatureTemplate;
+use Thelia\Model\Lang;
 use Thelia\Model\ModuleConfigQuery;
 use Thelia\Model\Order;
 use Thelia\Model\OrderStatusQuery;
@@ -32,10 +33,10 @@ use Thelia\Model\ProductCategory;
 use Thelia\Model\ProductCategoryQuery;
 use Thelia\Model\TemplateQuery;
 use Thelia\Module\AbstractPaymentModule;
-use Thelia\TaxEngine\TaxEngine;
 use TheliaGiftCard\Model\GiftCardCartQuery;
 use TheliaGiftCard\Model\GiftCardQuery;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
+use Symfony\Component\HttpFoundation\Response;
 use TheliaGiftCard\Model\Map\GiftCardCartTableMap;
 use TheliaGiftCard\Service\GiftCardService;
 use TheliaGiftCard\Service\GiftCardSpend;
@@ -89,7 +90,10 @@ class TheliaGiftCard extends AbstractPaymentModule
             $database = new Database($con);
             $database->insertSql(null, [__DIR__ . "/Config/TheliaMain.sql"]);
         }
-        $locale = $this->getRequest()->getSession()->getLang()->getLocale();
+        $request = $this->getContainer()->get('request_stack')->getCurrentRequest();
+        $locale = ($request && $request->hasSession() && $request->getSession()->getLang())
+            ? $request->getSession()->getLang()->getLocale()
+            : Lang::getDefaultLanguage()->getLocale();
 
         $this->handleGiftCardTemplate($locale);
     }
@@ -159,11 +163,13 @@ class TheliaGiftCard extends AbstractPaymentModule
         return $giftCardService->isGiftCardPayment();
     }
 
-    public function pay(Order $order): void
+    public function pay(Order $order): ?Response
     {
         $event = new OrderEvent($order);
         $event->setStatus(OrderStatusQuery::getPaidStatus()->getId());
         $this->getDispatcher()->dispatch($event, TheliaEvents::ORDER_UPDATE_STATUS);
+
+        return null;
     }
 
     public function manageStockOnCreation(): bool
@@ -317,8 +323,13 @@ class TheliaGiftCard extends AbstractPaymentModule
     public static function configureServices(ServicesConfigurator $servicesConfigurator): void
     {
         $servicesConfigurator->load(self::getModuleCode() . '\\', __DIR__)
-            ->exclude([THELIA_MODULE_DIR . ucfirst(self::getModuleCode()) . "/I18n/*"])
-            ->autowire()
-            ->autoconfigure();
+            ->exclude([
+                __DIR__ . '/I18n/*',
+                __DIR__ . '/Config/**/*.php',
+                __DIR__ . '/Model/Map/*',
+                __DIR__ . '/TheliaGiftCard.php',
+            ])
+            ->autowire(true)
+            ->autoconfigure(true);
     }
 }

@@ -10,6 +10,7 @@ use DateTime;
 use PDO;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\ActiveQuery\Join;
+use Propel\Runtime\ActiveQuery\ModelCriteria;
 use Thelia\Core\Template\Element\BaseLoop;
 use Thelia\Core\Template\Element\LoopResult;
 use Thelia\Core\Template\Element\LoopResultRow;
@@ -63,7 +64,7 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
         );
     }
 
-    public function buildModelCriteria()
+    public function buildModelCriteria(): ModelCriteria
     {
         $cardId = $this->getCardId();
         $customer = $this->getCustomer();
@@ -71,7 +72,10 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
         $desactivate = $this->getDesactivate();
         $currentCart = $this->getCurrentCart();
 
-        $locale = $this->getCurrentRequest()->getSession()->getLang()->getLocale();
+        $request = $this->getCurrentRequest();
+        $locale = $request->hasSession()
+            ? $request->getSession()->getLang()->getLocale()
+            : (\Thelia\Model\LangQuery::create()->findOneByByDefault(true)?->getLocale() ?? 'en_US');
 
         $search = GiftCardQuery::create()
             ->useProductQuery('')
@@ -87,7 +91,7 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
         if ($customer === 'current') {
             $current = $this->securityContext->getCustomerUser();
             if ($current === null) {
-                return null;
+                return $search->filterById(0);
             } else {
                 $search->filterByBeneficiaryCustomerId($current->getId(), Criteria::EQUAL);
             }
@@ -108,13 +112,13 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
         }
 
         if (false === $this->getBackendContext() && null == $customer) {
-            return null;
+            return $search->filterById(0);
         }
 
         $search->groupby(GiftCardTableMap::COL_ID);
 
         if ($currentCart) {
-            $cart = $this->getCurrentRequest()->getSession()->getSessionCart();
+            $cart = $request->hasSession() ? $request->getSession()->getSessionCart() : null;
 
             if ($cart === null) {
                 return $search;
@@ -140,7 +144,7 @@ class GiftCardList extends BaseLoop implements PropelSearchLoopInterface
         return $search;
     }
 
-    public function parseResults(LoopResult $loopResult)
+    public function parseResults(LoopResult $loopResult): LoopResult
     {
         $dateNow = new DateTime();
 

@@ -1,0 +1,45 @@
+{# Send gift card by email modal — form: gift_card_customer_email #}
+<div class="modal fade" id="send_gift_card_email" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="/admin/module/theliagiftcard/giftcard/send" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ 'Send gift card by email'|trans({}, 'theliagiftcard.bo.default') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {{ form_errors(form) }}
+
+                    {{ form_widget(form.success_url, { value: app.request.uri }) }}
+                    {{ form_widget(form.error_url, { value: app.request.uri }) }}
+                    {{ form_widget(form.gift_card_code, { id: 'giftCardCode' }) }}
+
+                    <div class="mb-3">
+                        {{ form_label(form.to) }}
+                        {{ form_widget(form.to, { attr: { class: 'form-control' } }) }}
+                        {{ form_errors(form.to) }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form_label(form.email_subject) }}
+                        {{ form_widget(form.email_subject, { attr: { class: 'form-control' }, value: 'Votre carte cadeau au format numérique.'|trans({}, 'theliagiftcard.bo.default') }) }}
+                        {{ form_errors(form.email_subject) }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form_label(form.email_text) }}
+                        {{ form_widget(form.email_text, { attr: { class: 'form-control', rows: 8 } }) }}
+                        {{ form_errors(form.email_text) }}
+                    </div>
+                    {{ form_rest(form) }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        {{ 'Cancel'|trans({}, 'theliagiftcard.bo.default') }}
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        {{ 'Save'|trans({}, 'theliagiftcard.bo.default') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

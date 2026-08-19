@@ -13,14 +13,12 @@ use Thelia\Mailer\MailerFactory;
 use Thelia\Model\ConfigQuery;
 use Thelia\Tools\URL;
 
-use OpenApi\Annotations as OA;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 use TheliaGiftCard\Service\GiftCardEmailService;
 
 /**
  * Class GiftCardCustomerEmailController
- * @Route("/admin/module/theliagiftcard/giftcard", name="gift_card_mail")
  */
 class GiftCardCustomerEmailController extends BaseAdminController
 {
@@ -28,6 +26,7 @@ class GiftCardCustomerEmailController extends BaseAdminController
      * @Route("/send", name="send_gift_card_mail", methods="POST")
      * @throws Exception
      */
+    #[Route('/admin/module/theliagiftcard/giftcard', name: 'gift_card_mail')]
     public function createOrUpdateAction(
         SecurityContext      $securityContext,
         ParserContext        $parser,

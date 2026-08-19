@@ -6,31 +6,76 @@
 
 namespace TheliaGiftCard\Hook;
 
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Event\Hook\HookRenderBlockEvent;
 use Thelia\Core\Event\Hook\HookRenderEvent;
 use Thelia\Core\Hook\BaseHook;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\SecurityContext;
+use Thelia\Core\Template\Parser\ParserResolver;
+use Thelia\Model\OrderQuery;
 use Thelia\Tools\URL;
+use TheliaGiftCard\Model\GiftCardOrderQuery;
+use TheliaGiftCard\Model\GiftCardQuery;
 use TheliaGiftCard\TheliaGiftCard;
 
 class HookManager extends BaseHook
 {
-    /*
-    * @var SecurityContext
-    */
-    private SecurityContext $securityContext;
+    public function __construct(
+        private readonly SecurityContext $securityContext,
+        ?EventDispatcherInterface $dispatcher = null,
+        ?ParserResolver $parserResolver = null,
+    ) {
+        parent::__construct($dispatcher, $parserResolver);
+    }
 
-    public function __construct( SecurityContext $securityContext)
+    public static function getSubscribedHooks(): array
     {
-        parent::__construct();
-        $this->securityContext = $securityContext;
+        return [
+            'main.top-menu-tools' => [
+                ['type' => 'back', 'method' => 'onMainTopMenuTools'],
+            ],
+            'order-edit.after-order-product-list' => [
+                ['type' => 'back', 'method' => 'cardGiftAccountUsageInOrder'],
+            ],
+        ];
     }
 
     public function cardGiftAccountUsageInOrder(HookRenderEvent $event): void
     {
+        $orderId = (int) $event->getArgument('order_id');
+
+        $order = OrderQuery::create()->findPk($orderId);
+        $currencySymbol = $order?->getCurrency()?->getSymbol() ?? '';
+
+        $lines = [];
+        $totalSpendAmount = 0.0;
+
+        $giftCardOrders = GiftCardOrderQuery::create()
+            ->filterByOrderId($orderId)
+            ->find();
+
+        foreach ($giftCardOrders as $giftCardOrder) {
+            $spendAmount = (float) $giftCardOrder->getSpendAmount();
+            $totalSpendAmount += $spendAmount;
+
+            $giftCard = GiftCardQuery::create()->findPk($giftCardOrder->getGiftCardId());
+
+            $lines[] = [
+                'code' => $giftCard?->getCode() ?? '',
+                'spend_amount' => $spendAmount,
+            ];
+        }
+
         $event->add(
-            $this->render("gift-card-usage-on-order.html", [ 'order_id' => $event->getArgument('order_id') ])
+            $this->render(
+                'TheliaGiftCard/gift-card-usage-on-order.html.twig',
+                [
+                    'lines' => $lines,
+                    'total_spend_amount' => $totalSpendAmount,
+                    'currency_symbol' => $currencySymbol,
+                ]
+            )
         );
     }
 
@@ -43,7 +88,7 @@ class HookManager extends BaseHook
             [AccessManager::VIEW]
         );
 
-        if($isGranted) {
+        if ($isGranted) {
             $event->add(
                 [
                     'id' => 'tools_menu_gidt_card',

@@ -34,6 +34,9 @@ class GiftCardEmailService
     public function generatePdfAction(string $code): string
     {
         $request = $this->requestStack->getCurrentRequest();
+        $defaultLocale = ($request && $request->hasSession())
+            ? $request->getSession()->getAdminLang()->getLocale()
+            : (\Thelia\Model\LangQuery::create()->findOneByByDefault(true)?->getLocale() ?? 'en_US');
 
         try {
             $infos = $this->giftCardService->getInfoGiftCard($code);
@@ -51,7 +54,7 @@ class GiftCardEmailService
                     'SNAME' => $infos['sponsorName'],
                     'BNAME' => $infos['beneficiaryName'],
                     'AMOUNT' => $infos['amount'],
-                    'default_locale' => $request->getSession()->getAdminLang()->getLocale()
+                    'default_locale' => $defaultLocale
                 ]
             );
 

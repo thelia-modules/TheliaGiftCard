@@ -7,7 +7,7 @@
 namespace TheliaGiftCard\Controller\Back;
 
 use Exception;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 use Propel\Runtime\Exception\PropelException;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -22,6 +22,7 @@ use Thelia\Core\Template\TemplateHelperInterface;
 use Thelia\Form\Exception\FormValidationException;
 use Thelia\Log\Tlog;
 use Thelia\Model\ConfigQuery;
+use Thelia\Tools\TokenProvider;
 use Thelia\Tools\URL;
 use TheliaGiftCard\Model\GiftCard;
 use TheliaGiftCard\Model\GiftCardInfoCartQuery;
@@ -32,16 +33,16 @@ use TheliaGiftCard\Model\GiftCardInfoCart;
 
 /**
  * Class GiftCardConfigController
- * @Route("/admin/module/theliagiftcard", name="gift_card_config")
  */
 class GiftCardConfigController extends BaseAdminController
 {
     /**
      * @Route("/config/save", name="edit_config")
      */
+    #[Route('/admin/module/theliagiftcard', name: 'gift_card_config')]
     public function editConfigAction(SecurityContext $securityContext, ParserContext $parserContext): RedirectResponse|Response
     {
-        if (null === $this->checkAdmin($securityContext)) {
+        if (!$this->checkAdmin($securityContext)) {
             return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/modules'));
         }
 
@@ -70,8 +71,8 @@ class GiftCardConfigController extends BaseAdminController
     }
 
     /**
-     * @Route("/config/send/pdf", name="config_send_pdf")
      */
+    #[Route('/config/send/pdf', name: 'config_send_pdf')]
     public function manualSendPdfAction(
         Request                  $request,
         TemplateHelperInterface  $templateHelper,
@@ -80,7 +81,7 @@ class GiftCardConfigController extends BaseAdminController
         GiftCardService          $giftCardService
     ): RedirectResponse|Response
     {
-        if (null === $this->checkAdmin($securityContext)) {
+        if (!$this->checkAdmin($securityContext)) {
             return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/modules'));
         }
 
@@ -123,12 +124,12 @@ class GiftCardConfigController extends BaseAdminController
     }
 
     /**
-     * @Route("/generate-gift-card", name="generate_gift_card")
      * @throws PropelException
      */
+    #[Route('/generate-gift-card', name: 'generate_gift_card')]
     public function generateGiftCardAction(ParserContext $parserContext, SecurityContext $securityContext): RedirectResponse|Response
     {
-        if (null === $this->checkAdmin($securityContext)) {
+        if (!$this->checkAdmin($securityContext)) {
             return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/modules'));
         }
 
@@ -171,16 +172,18 @@ class GiftCardConfigController extends BaseAdminController
     }
 
     /**
-     * @Route("/activate", name="activate_gift_card")
      * @throws PropelException
      */
-    public function activateGiftCardAction(Request $request, SecurityContext $securityContext): RedirectResponse|Response
+    #[Route('/activate', name: 'activate_gift_card', methods: ['POST'])]
+    public function activateGiftCardAction(Request $request, SecurityContext $securityContext, TokenProvider $tokenProvider): RedirectResponse|Response
     {
-        if (null === $this->checkAdmin($securityContext)) {
+        if (!$this->checkAdmin($securityContext)) {
             return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/modules'));
         }
 
-        $codeGC = $request->get('code');
+        $tokenProvider->checkToken((string) $request->query->get('_token'));
+
+        $codeGC = $request->query->get('code');
 
         $giftCard = GiftCardQuery::create()
             ->filterByCode($codeGC)
@@ -194,12 +197,12 @@ class GiftCardConfigController extends BaseAdminController
     }
 
     /**
-     * @Route("/edit-gift-card", name="edit_gift_card")
      * @throws PropelException
      */
+    #[Route('/edit-gift-card', name: 'edit_gift_card')]
     public function editGiftCardAction(ParserContext $parserContext, SecurityContext $securityContext): RedirectResponse|Response
     {
-        if (null === $this->checkAdmin($securityContext)) {
+        if (!$this->checkAdmin($securityContext)) {
             return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/modules'));
         }
 
@@ -243,15 +246,18 @@ class GiftCardConfigController extends BaseAdminController
     }
 
     /**
-     * @Route("/deactivate", name="deactivate_gift_card")
      */
-    public function deactivateGiftCard(Request $request, SecurityContext $securityContext): RedirectResponse|Response
+    #[Route('/deactivate', name: 'deactivate_gift_card', methods: ['POST'])]
+    public function deactivateGiftCard(Request $request, SecurityContext $securityContext, TokenProvider $tokenProvider): RedirectResponse|Response
     {
-        if (null === $this->checkAdmin($securityContext)) {
+        if (!$this->checkAdmin($securityContext)) {
             return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/modules'));
         }
+
+        $tokenProvider->checkToken((string) $request->query->get('_token'));
+
         try {
-            $codeGC = $request->get('code');
+            $codeGC = $request->query->get('code');
 
             $giftCard = GiftCardQuery::create()
                 ->filterByCode($codeGC)

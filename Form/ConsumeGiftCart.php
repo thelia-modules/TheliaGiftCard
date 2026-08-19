@@ -61,7 +61,8 @@ class ConsumeGiftCart extends BaseForm
     protected function getGiftCardCodes():array
     {
         /** @var Customer $customer */
-        if(!$customer = $this->getRequest()->getSession()->getCustomerUser()){
+        $request = $this->getRequest();
+        if (!$request->hasSession() || !$customer = $request->getSession()->getCustomerUser()) {
             return [];
         }
 

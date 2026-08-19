@@ -10,20 +10,4 @@
     <services>
         <service id="gift.card.service" alias="TheliaGiftCard\Service\GiftCardService" public="true"/>
     </services>
-    <hooks>
-        <hook id="theliagiftcard.hook" class="TheliaGiftCard\Hook\HookManager">
-            <tag name="hook.event_listener" event="main.top-menu-tools" type="back" method="onMainTopMenuTools"/>
-            <tag name="hook.event_listener" event="order-edit.after-order-product-list" type="back" method="cardGiftAccountUsageInOrder" />
-            <argument type="service" id="thelia.securityContext"/>
-        </hook>
-        <hook id="giftcard.hook.config.back" class="TheliaGiftCard\Hook\HookConfigurationManager">
-            <tag name="hook.event_listener" event="module.configuration" type="back" method="onConfiguration"/>
-            <tag name="hook.event_listener" event="module.config-js" type="back" method="onProductEditJs" />
-        </hook>
-        <hook id="theliagiftcard.front.account.hook" class="TheliaGiftCard\Hook\HookFrontManager">
-            <tag name="hook.event_listener" event="account.bottom" type="front" method="onAccountBottom" />
-            <tag name="hook.event_listener" event="product.bottom" type="front" method="onProductAdditional"/>
-            <tag name="hook.event_listener" event="order-invoice.giftcard-form" type="front" method="onOrderInvoiceBottom" />
-        </hook>
-    </hooks>
 </config>

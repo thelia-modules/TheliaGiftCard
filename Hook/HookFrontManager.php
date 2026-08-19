@@ -14,11 +14,30 @@ use TheliaGiftCard\TheliaGiftCard;
 
 class HookFrontManager extends BaseHook
 {
+    public static function getSubscribedHooks(): array
+    {
+        return [
+            'account.bottom' => [
+                ['type' => 'front', 'method' => 'onAccountBottom'],
+            ],
+            'product.bottom' => [
+                ['type' => 'front', 'method' => 'onProductAdditional'],
+            ],
+            'order-invoice.giftcard-form' => [
+                ['type' => 'front', 'method' => 'onOrderInvoiceBottom'],
+            ],
+        ];
+    }
+
     public function onAccountBottom(HookRenderEvent $event): void
     {
         $category = CategoryQuery::create()->findPk(TheliaGiftCard::getGiftCardCategoryId());
         if ($category) {
-            $urlToBuyGiftCard = URL::getInstance()->absoluteUrl($category->getRewrittenUrl($this->getSession()->getLang()->getLocale()));
+            $request = $this->getRequest();
+            $locale = ($request && $request->hasSession())
+                ? $request->getSession()->getLang()->getLocale()
+                : (\Thelia\Model\LangQuery::create()->findOneByByDefault(true)?->getLocale() ?? 'en_US');
+            $urlToBuyGiftCard = URL::getInstance()->absoluteUrl($category->getRewrittenUrl($locale));
 
             $event->add(
                 $this->render("account-gift-card.html", ['urlToBuyGiftCard' => $urlToBuyGiftCard])

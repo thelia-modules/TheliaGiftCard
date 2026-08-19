@@ -94,7 +94,11 @@ class GiftCardService
     public function reset(): void
     {
         try {
-            $cartId = $this->requestStack->getCurrentRequest()->getSession()->getSessionCart()->getId();
+            $request = $this->requestStack->getCurrentRequest();
+            if (null === $request || !$request->hasSession()) {
+                return;
+            }
+            $cartId = $request->getSession()->getSessionCart()->getId();
 
             GiftCardCartQuery::create()
                 ->filterByCartId($cartId)
@@ -108,9 +112,12 @@ class GiftCardService
     public function isGiftCardPayment():bool
     {
         $request = $this->requestStack->getCurrentRequest();
+        if (null === $request || !$request->hasSession()) {
+            return false;
+        }
 
         /** @var Cart $cart */
-        $cart = $this->requestStack->getCurrentRequest()->getSession()->getSessionCart();
+        $cart = $request->getSession()->getSessionCart();
         $order = $request->getSession()->getOrder();
 
         if (!$order->getDeliveryModuleId()) {

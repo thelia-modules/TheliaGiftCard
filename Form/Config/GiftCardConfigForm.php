@@ -75,7 +75,9 @@ class GiftCardConfigForm extends BaseForm
         /** @var Request $request */
         $request = $this->request;
 
-        $lang = $request->getSession()?->getAdminEditionLang();
+        $lang = $request->hasSession()
+            ? $request->getSession()->getAdminEditionLang()
+            : \Thelia\Model\Lang::getDefaultLanguage();
 
         $categories = CategoryQuery::create()
             ->joinWithI18n($lang->getLocale(), Criteria::INNER_JOIN)
@@ -99,7 +101,9 @@ class GiftCardConfigForm extends BaseForm
         /** @var Request $request */
         $request = $this->request;
 
-        $lang = $request->getSession()?->getAdminEditionLang();
+        $lang = $request->hasSession()
+            ? $request->getSession()->getAdminEditionLang()
+            : \Thelia\Model\Lang::getDefaultLanguage();
 
         $ordersStatus = OrderStatusQuery::create()
             ->joinWithI18n($lang->getLocale(), Criteria::INNER_JOIN)
