@@ -46,6 +46,13 @@ class TheliaGiftCard extends AbstractPaymentModule
     const  DOMAIN_NAME = 'theliagiftcard';
     const  MODULE_CODE = 'TheliaGiftCard';
 
+    /**
+     * Front-office translation domain. Thelia derives it from the name of the template
+     * directory (`templates/frontOffice/flexy`) and reads the catalogues from the mirrored
+     * `I18n/frontOffice/flexy`, so renaming either one renames the domain.
+     */
+    const FRONT_TRANSLATION_DOMAIN = 'theliagiftcard.fo.flexy';
+
     const GIFT_CARD_CART_PRODUCT_REF = 'GIFTCARD_CART';
 
     const GIFT_CARD_TOOL_CATEGORY_CONF_NAME = 'gift_card_tool_category';
