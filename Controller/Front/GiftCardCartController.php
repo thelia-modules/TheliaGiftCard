@@ -23,10 +23,7 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 class GiftCardCartController extends BaseFrontController
 {
-    /**
-     * @Route("/add", name="buy_gift_card_to_cart")
-     */
-    #[Route('/gift-card/cart', name: 'buy_gift_card')]
+    #[Route('/gift-card/info/save', name: 'buy_gift_card', methods: 'POST')]
     public function saveInfoAction(Session $session, EventDispatcherInterface $dispatcher): RedirectResponse|Response
     {
         $form = $this->createForm('save_gift_card_info');
