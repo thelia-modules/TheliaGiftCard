@@ -34,12 +34,10 @@ use TheliaGiftCard\Model\GiftCardInfoCart;
 /**
  * Class GiftCardConfigController
  */
+#[Route('/admin/module/theliagiftcard')]
 class GiftCardConfigController extends BaseAdminController
 {
-    /**
-     * @Route("/config/save", name="edit_config")
-     */
-    #[Route('/admin/module/theliagiftcard', name: 'gift_card_config')]
+    #[Route('/config/save', name: 'gift_card_config')]
     public function editConfigAction(SecurityContext $securityContext, ParserContext $parserContext): RedirectResponse|Response
     {
         if (!$this->checkAdmin($securityContext)) {

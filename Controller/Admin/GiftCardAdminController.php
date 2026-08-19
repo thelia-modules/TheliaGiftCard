@@ -23,14 +23,14 @@ use Symfony\Component\Routing\Attribute\Route;
 /**
  * Class GiftCardAdminController
  */
+#[Route('/admin/module/theliagiftcard')]
 class GiftCardAdminController extends BaseAdminController
 {
     /**
-     * @Route("/show/{code}", name="show_code")
      * @throws PropelException
      */
-    #[Route('/admin/module/theliagiftcard', name: 'gift_card_admin')]
-    public function showGiftCard($code, Request $request): JsonResponse
+    #[Route('/show/{code}', name: 'gift_card_admin')]
+    public function showGiftCard(string $code, Request $request): JsonResponse
     {
         $tab = [];
 
@@ -75,7 +75,7 @@ class GiftCardAdminController extends BaseAdminController
 
     /**
      */
-    #[Route('/show', name: 'show')]
+    #[Route('/show', name: 'gift_card_show_list')]
     public function showGiftCardsList(Request $request): JsonResponse
     {
         $json = [

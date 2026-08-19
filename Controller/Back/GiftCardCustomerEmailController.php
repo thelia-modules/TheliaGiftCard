@@ -23,10 +23,9 @@ use TheliaGiftCard\Service\GiftCardEmailService;
 class GiftCardCustomerEmailController extends BaseAdminController
 {
     /**
-     * @Route("/send", name="send_gift_card_mail", methods="POST")
      * @throws Exception
      */
-    #[Route('/admin/module/theliagiftcard/giftcard', name: 'gift_card_mail')]
+    #[Route('/admin/module/theliagiftcard/giftcard/send', name: 'gift_card_mail', methods: 'POST')]
     public function createOrUpdateAction(
         SecurityContext      $securityContext,
         ParserContext        $parser,
