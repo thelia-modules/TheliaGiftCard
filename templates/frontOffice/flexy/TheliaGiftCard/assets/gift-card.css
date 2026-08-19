@@ -66,6 +66,12 @@
     flex: 0 1 18rem;
 }
 
+/* Undo the align-self the button carries for the stacked form, so it lines up with the input
+   next to it rather than with the label above it. */
+.theliaGiftCard_inline > .theliaGiftCard_button {
+    align-self: flex-end;
+}
+
 .theliaGiftCard_label {
     font-size: 0.875rem;
 }
