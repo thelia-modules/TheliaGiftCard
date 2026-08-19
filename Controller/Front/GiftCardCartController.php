@@ -14,17 +14,29 @@ use Thelia\Core\HttpFoundation\Session\Session;
 use Thelia\Controller\Front\BaseFrontController;
 use Thelia\Core\Event\Cart\CartEvent;
 use Thelia\Core\Event\TheliaEvents;
+use Thelia\Log\Tlog;
 use Thelia\Model\ProductSaleElementsQuery;
 use TheliaGiftCard\Model\GiftCardInfoCart;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 /**
  * Class GiftCardController
  */
 class GiftCardCartController extends BaseFrontController
 {
+    /**
+     * Thelia 3 serves the cart from the checkout controller; the Thelia 2 `cart.view` route
+     * belonged to the Front module, which Thelia 3 dropped.
+     */
+    private const CART_ROUTE = 'checkout_cart';
+
     #[Route('/gift-card/info/save', name: 'buy_gift_card', methods: 'POST')]
-    public function saveInfoAction(Session $session, EventDispatcherInterface $dispatcher): RedirectResponse|Response
+    public function saveInfoAction(
+        Session $session,
+        EventDispatcherInterface $dispatcher,
+        UrlGeneratorInterface $urlGenerator
+    ): RedirectResponse|Response
     {
         $form = $this->createForm('save_gift_card_info');
 
@@ -43,7 +55,7 @@ class GiftCardCartController extends BaseFrontController
 
             if ($product_id) {
                 $cartEvent->setQuantity(1);
-                $cartEvent->setProduct($product_id);
+                $cartEvent->setProductId($product_id);
                 $cartEvent->setNewness(1);
 
                 $pse = ProductSaleElementsQuery::create()->findOneByProductId($product_id);
@@ -83,13 +95,11 @@ class GiftCardCartController extends BaseFrontController
             }
 
         } catch (Exception $e) {
-            return $this->generateRedirectFromRoute('cart.view', ['error_custom' => $e]);
+            Tlog::getInstance()->addError($e->getMessage());
+
+            return $this->generateRedirect($urlGenerator->generate(self::CART_ROUTE));
         }
 
-        return $this->generateRedirectFromRoute('cart.view', [
-            'product_id' => 1002
-        ], [
-            'product_id' => 1002
-        ]);
+        return $this->generateRedirect($urlGenerator->generate(self::CART_ROUTE));
     }
 }
