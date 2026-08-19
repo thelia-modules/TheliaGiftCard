@@ -28,6 +28,7 @@ return array(
     'Select your Gift Card' => 'Select your gift card',
     'Send Card Gift' => 'Send the gift card',
     'Status' => 'Status',
+    'Tell us who this gift card is from and who it is for. Your message is printed on the card.' => 'Tell us who this gift card is from and who it is for. Your message is printed on the card.',
     'Terms of use' => 'Terms of use',
     'The amount of the card may be used repeatedly as needed until the end period or until used up.' => 'The amount of the card may be used repeatedly as needed until the end period or until used up.',
     'The amount you want to use is decided when finalizing your cart.' => 'The amount you want to use is decided when finalizing your cart.',

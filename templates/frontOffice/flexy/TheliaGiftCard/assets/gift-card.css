@@ -1,122 +1,141 @@
 /* Styles for the gift-card blocks injected into a Twig front-office theme.
-   Module-owned on purpose: the Flexy theme builds its Tailwind stylesheet by scanning its own
-   directories, so utility classes written in a module template would never be compiled. Colours
-   and fonts are inherited from the theme instead of being redeclared, so the block blends in. */
+
+   The visual identity comes from the theme: the templates reuse the Flexy classes (`container-l`,
+   `h4`, `paragraph-*`, `Input*`, `button button-style`), so the fields, the buttons and the type
+   scale are the theme's own. This file only adds what Flexy has no class for — the block frame,
+   the table, the badges — and it builds them on the theme's design tokens, each one with a
+   fallback so the block stays readable on a theme that does not define them.
+
+   Module-owned rather than added to the theme: the theme's Tailwind build scans its own
+   directories only, so a utility class written in a module template would never be compiled.
+   Everything below is plain CSS, scoped under .theliaGiftCard. */
+
+.theliaGiftCard_container {
+    margin-block: 1rem 3rem;
+}
+
+/* Matches the width of the account page's content column (max-w-4xl). */
+.theliaGiftCard-narrow {
+    margin-inline: auto;
+    max-width: 56rem;
+}
 
 .theliaGiftCard {
+    --gc-ink: var(--color-black, currentColor);
+    --gc-muted: var(--color-grey-dark, color-mix(in srgb, currentColor 65%, transparent));
+    --gc-line: var(--color-grey-lighter, color-mix(in srgb, currentColor 20%, transparent));
+    --gc-surface: var(--color-lighter, color-mix(in srgb, currentColor 4%, transparent));
+
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    margin: 2.5rem auto;
-    padding: 1.5rem;
-    max-width: 72rem;
-    border: 1px solid currentColor;
+    gap: 1.5rem;
+    box-sizing: border-box;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
     border-radius: 0.5rem;
-    color: inherit;
-    font: inherit;
+    background: var(--gc-surface);
+    color: var(--gc-ink);
 }
 
-.theliaGiftCard_title {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
+.theliaGiftCard *,
+.theliaGiftCard *::before,
+.theliaGiftCard *::after {
+    box-sizing: border-box;
 }
 
-.theliaGiftCard_subtitle {
-    margin: 1rem 0 0;
-    font-size: 1rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
+/* HEADER */
 
-.theliaGiftCard_form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.theliaGiftCard_fields {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem 1.5rem;
-    width: 100%;
-}
-
-.theliaGiftCard_field {
+.theliaGiftCard_header {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
 }
 
-/* The two-column row of the product form. `flex` is set here and not on the field itself: the
-   form is a column flex container, where a flex-basis would be read as a height. */
-.theliaGiftCard_fields > .theliaGiftCard_field {
-    flex: 1 1 16rem;
+.theliaGiftCard_title {
+    margin: 0;
 }
 
-/* A field and its submit button side by side, wrapping under each other when there is no room. */
+.theliaGiftCard_lead {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--gc-muted);
+}
+
+.theliaGiftCard_subtitle {
+    margin: 0 0 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+/* FORMS
+
+   The forms themselves are laid out with the theme's own classes (`flex flex-col gap-5`, and
+   `grid sm:grid-cols-2 gap-5` for a two-field row). That gap-* class is also what switches off
+   Flexy's `.Input + .Input` stacking margin, which would otherwise offset the second field of a
+   row — the theme cancels it for any container carrying a gap. Only the code row below needs a
+   rule of its own. */
+
+/* The code field and its submit button on one line, wrapping under each other when there is no
+   room. `align-items: end` lines the button up with the input, not with the label above it. */
 .theliaGiftCard_inline {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 0.75rem;
-    align-items: flex-end;
+    gap: 0.75rem 1rem;
+    align-items: end;
 }
 
-.theliaGiftCard_inline > .theliaGiftCard_field {
-    flex: 0 1 18rem;
+.theliaGiftCard_codeField {
+    flex: 1 1 16rem;
+    max-width: 22rem;
 }
 
-/* Undo the align-self the button carries for the stacked form, so it lines up with the input
-   next to it rather than with the label above it. */
-.theliaGiftCard_inline > .theliaGiftCard_button {
-    align-self: flex-end;
-}
-
-.theliaGiftCard_label {
-    font-size: 0.875rem;
-}
-
-.theliaGiftCard_input,
-.theliaGiftCard_textarea {
-    padding: 0.5rem 0.75rem;
-    width: 100%;
-    border: 1px solid currentColor;
-    border-radius: 0.25rem;
-    background: transparent;
-    color: inherit;
-    font: inherit;
+.theliaGiftCard_codeInput {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
 }
 
 .theliaGiftCard_textarea {
+    display: block;
+    min-height: 6rem;
     resize: vertical;
 }
 
-.theliaGiftCard_button {
-    align-self: flex-start;
-    padding: 0.5rem 1.25rem;
-    border: 1px solid currentColor;
-    border-radius: 0.25rem;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
+/* The theme sizes its buttons on the line box of their label; the inline row needs the button to
+   match the height of the input next to it. */
+.theliaGiftCard_submit {
+    flex: 0 0 auto;
 }
 
-.theliaGiftCard_error {
-    margin: 0;
-    font-size: 0.875rem;
-    font-weight: 600;
-}
+/* EMPTY STATE */
 
 .theliaGiftCard_empty {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: baseline;
     margin: 0;
+    padding: 1rem 1.25rem;
+    border: 1px dashed var(--gc-line);
+    border-radius: 0.5rem;
+    color: var(--gc-muted);
 }
 
 .theliaGiftCard_link {
+    color: inherit;
+    font-weight: 600;
     text-decoration: underline;
+    text-underline-offset: 0.2em;
 }
 
-/* The table scrolls inside its own box: seven columns do not fit a phone screen, and the page
+/* LIST */
+
+.theliaGiftCard_list {
+    border-top: 1px solid var(--gc-line);
+    padding-top: 1.5rem;
+}
+
+/* The table scrolls inside its own box: seven columns do not fit a narrow screen, and the page
    itself must never scroll sideways. */
 .theliaGiftCard_tableWrapper {
     overflow-x: auto;
@@ -141,9 +160,109 @@
     white-space: nowrap;
 }
 
-.theliaGiftCard_table th,
-.theliaGiftCard_table td {
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid currentColor;
+.theliaGiftCard_table th {
+    padding: 0 0.75rem 0.625rem;
+    border-bottom: 1px solid var(--gc-line);
+    color: var(--gc-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     white-space: nowrap;
+}
+
+.theliaGiftCard_table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--gc-line);
+    vertical-align: middle;
+}
+
+.theliaGiftCard_table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.theliaGiftCard_numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.theliaGiftCard_code {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid var(--gc-line);
+    border-radius: 0.375rem;
+    background: var(--color-white, transparent);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.06em;
+}
+
+/* The wording carries the state; the tint only reinforces it, so the three cases stay legible
+   without relying on colour alone. */
+.theliaGiftCard_badge {
+    display: inline-block;
+    padding: 0.125rem 0.625rem;
+    border: 1px solid var(--gc-line);
+    border-radius: 999px;
+    color: var(--gc-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.6;
+    white-space: nowrap;
+}
+
+.theliaGiftCard_badge-on {
+    border-color: transparent;
+    background: var(--color-validated-lightest, color-mix(in srgb, currentColor 10%, transparent));
+    color: var(--color-validated, inherit);
+}
+
+/* Under 48rem the table stops being a table: each row becomes a small card and every value is
+   printed behind the column name it repeats in data-label. */
+@media (max-width: 48rem) {
+    .theliaGiftCard_table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+    }
+
+    .theliaGiftCard_table,
+    .theliaGiftCard_table tbody,
+    .theliaGiftCard_table tr,
+    .theliaGiftCard_table td {
+        display: block;
+        width: 100%;
+    }
+
+    .theliaGiftCard_table tr {
+        margin-bottom: 0.75rem;
+        padding: 0.25rem 0.875rem;
+        border: 1px solid var(--gc-line);
+        border-radius: 0.5rem;
+        background: var(--color-white, transparent);
+    }
+
+    .theliaGiftCard_table tbody tr:last-child {
+        margin-bottom: 0;
+    }
+
+    .theliaGiftCard_table td {
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        text-align: left;
+    }
+
+    .theliaGiftCard_table td::before {
+        content: attr(data-label);
+        color: var(--gc-muted);
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
 }

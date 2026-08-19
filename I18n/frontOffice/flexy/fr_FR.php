@@ -28,6 +28,7 @@ return array(
     'Select your Gift Card' => 'Sélectionner votre carte cadeau',
     'Send Card Gift' => 'Envoyer la carte cadeau',
     'Status' => 'Statut',
+    'Tell us who this gift card is from and who it is for. Your message is printed on the card.' => 'Indiquez de la part de qui et pour qui est cette carte cadeau. Votre message sera imprimé sur la carte.',
     'Terms of use' => 'Conditions d\'utilisation',
     'The amount of the card may be used repeatedly as needed until the end period or until used up.' => 'Le montant de la carte cadeau peut être consommé en plusieurs fois, jusqu\'à épuisement du solde ou arrivée au terme de validité.',
     'The amount you want to use is decided when finalizing your cart.' => 'Le choix du solde à utiliser s\'effectue à la commande, lors de la validation du panier.',

@@ -7,79 +7,88 @@
    Thelia translator, which `|trans` does not reach on a front-office request. See
    TheliaGiftCard\Twig\FrontTranslationExtension.
 
-   Styling is module-owned (gift-card.css, semantic class names): the Flexy theme compiles its
-   Tailwind CSS by scanning its own directories only, so a utility class used here alone would
-   simply not exist in the stylesheet the page loads. #}
+   Styling follows the Flexy design system by reusing ITS class names — see the comment at the top
+   of account-gift-card.html.twig. #}
 <link rel="stylesheet" href="{{ module_asset('TheliaGiftCard', 'TheliaGiftCard/assets/gift-card.css') }}">
 
-<section class="theliaGiftCard">
-    <h2 class="theliaGiftCard_title">{{ 'Gift Card Informations'|theliagiftcard_trans }}</h2>
+<div class="container-l theliaGiftCard_container">
+    <section class="theliaGiftCard">
+        <header class="theliaGiftCard_header">
+            <h2 class="h4 theliaGiftCard_title">{{ 'Gift Card Informations'|theliagiftcard_trans }}</h2>
+            <p class="paragraph-5 theliaGiftCard_lead">{{ 'Tell us who this gift card is from and who it is for. Your message is printed on the card.'|theliagiftcard_trans }}</p>
+        </header>
 
-    {% set form = getForm('save_gift_card_info') %}
+        {% set form = getForm('save_gift_card_info') %}
 
-    {# beneficiary_email and beneficiary_address are part of the form but deliberately not shown,
-       as in the Smarty template this replaces: the controller saves them only when submitted.
-       Marked rendered so form_end() does not print them as extra text fields. #}
-    {% do form.beneficiary_email.setRendered %}
-    {% do form.beneficiary_address.setRendered %}
+        {# beneficiary_email and beneficiary_address are part of the form but deliberately not
+           shown, as in the Smarty template this replaces: the controller saves them only when
+           submitted. Marked rendered so form_end() does not print them as extra text fields. #}
+        {% do form.beneficiary_email.setRendered %}
+        {% do form.beneficiary_address.setRendered %}
 
-    {{ form_start(form, {
-        action: path('buy_gift_card'),
-        method: 'POST',
-        attr: {class: 'theliaGiftCard_form'},
-    }) }}
-        {# The form declares product_id as a text field; the customer never types it, the page
-           already knows which product this is. Rendered as hidden, and not required: a hidden
-           input is barred from constraint validation anyway. #}
-        {{ form_widget(form.product_id, {type: 'hidden', value: productId, required: false}) }}
+        {{ form_start(form, {
+            action: path('buy_gift_card'),
+            method: 'POST',
+            attr: {class: 'flex flex-col gap-5 w-full'},
+        }) }}
+            {# The form declares product_id as a text field; the customer never types it, the page
+               already knows which product this is. Rendered as hidden, and not required: a hidden
+               input is barred from constraint validation anyway. #}
+            {{ form_widget(form.product_id, {type: 'hidden', value: productId, required: false}) }}
 
-        {% if form.vars.errors|length %}
-            <p class="theliaGiftCard_error">{{ form.vars.errors|first.message }}</p>
-        {% endif %}
-
-        {# required: false on every field — none of them carries a NotBlank constraint, and the
-           controller stores each one only when it was submitted. Symfony marks a field required by
-           default, which would block the add-to-cart on an empty message. #}
-        <div class="theliaGiftCard_fields">
-            <div class="theliaGiftCard_field">
-                <label class="theliaGiftCard_label" for="{{ form.sponsor_name.vars.id }}">
-                    {{ form.sponsor_name.vars.label }}
-                </label>
-                {{ form_widget(form.sponsor_name, {required: false, attr: {class: 'theliaGiftCard_input'}}) }}
-                {% if form.sponsor_name.vars.errors|length %}
-                    <p class="theliaGiftCard_error">{{ form.sponsor_name.vars.errors|first.message }}</p>
-                {% endif %}
-            </div>
-
-            <div class="theliaGiftCard_field">
-                <label class="theliaGiftCard_label" for="{{ form.beneficiary_name.vars.id }}">
-                    {{ form.beneficiary_name.vars.label }}
-                </label>
-                {{ form_widget(form.beneficiary_name, {required: false, attr: {class: 'theliaGiftCard_input'}}) }}
-                {% if form.beneficiary_name.vars.errors|length %}
-                    <p class="theliaGiftCard_error">{{ form.beneficiary_name.vars.errors|first.message }}</p>
-                {% endif %}
-            </div>
-        </div>
-
-        {# Rendered by hand, and marked rendered right after: the field is a TextType, so
-           form_widget() would print a single-line input for what is a message. #}
-        <div class="theliaGiftCard_field">
-            <label class="theliaGiftCard_label" for="{{ form.beneficiary_message.vars.id }}">
-                {{ form.beneficiary_message.vars.label }}
-            </label>
-            <textarea id="{{ form.beneficiary_message.vars.id }}"
-                      class="theliaGiftCard_textarea"
-                      name="{{ form.beneficiary_message.vars.full_name }}"
-                      rows="4">{{ form.beneficiary_message.vars.value }}</textarea>
-            {% if form.beneficiary_message.vars.errors|length %}
-                <p class="theliaGiftCard_error">{{ form.beneficiary_message.vars.errors|first.message }}</p>
+            {% if form.vars.errors|length %}
+                <p class="Input-error paragraph-5" role="alert">{{ form.vars.errors|first.message }}</p>
             {% endif %}
-        </div>
-        {% do form.beneficiary_message.setRendered %}
 
-        <button type="submit" class="theliaGiftCard_button">
-            {{ 'Add to cart'|theliagiftcard_trans }}
-        </button>
-    {{ form_end(form) }}
-</section>
+            {# `grid sm:grid-cols-2 gap-5` is the theme's own way of putting two fields on one line
+               (see its address form): Flexy stacks consecutive .Input with a margin, and cancels
+               that margin as soon as the container carries a gap-* class.
+
+               required: false on every field — none of them carries a NotBlank constraint, and the
+               controller stores each one only when it was submitted. Symfony marks a field required
+               by default, which would block the add-to-cart on an empty message. #}
+            <div class="grid sm:grid-cols-2 gap-5">
+                {% for field in [form.sponsor_name, form.beneficiary_name] %}
+                    <div class="Input">
+                        <div class="Input-header">
+                            <label class="Input-label" for="{{ field.vars.id }}">{{ field.vars.label }}</label>
+                        </div>
+                        <div class="Input-blockInput">
+                            {{ form_widget(field, {required: false, attr: {
+                                class: 'Input-input' ~ (field.vars.errors|length ? ' is-error' : ''),
+                            }}) }}
+                        </div>
+                        {% if field.vars.errors|length %}
+                            <p class="Input-error">{{ field.vars.errors|first.message }}</p>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+
+            </div>
+
+            {# Rendered by hand, and marked rendered right after: the field is a TextType, so
+               form_widget() would print a single-line input for what is a message. #}
+            <div class="Input">
+                <div class="Input-header">
+                    <label class="Input-label" for="{{ form.beneficiary_message.vars.id }}">
+                        {{ form.beneficiary_message.vars.label }}
+                    </label>
+                </div>
+                <div class="Input-blockInput">
+                    <textarea id="{{ form.beneficiary_message.vars.id }}"
+                              class="Input-input theliaGiftCard_textarea{{ form.beneficiary_message.vars.errors|length ? ' is-error' : '' }}"
+                              name="{{ form.beneficiary_message.vars.full_name }}"
+                              rows="4">{{ form.beneficiary_message.vars.value }}</textarea>
+                </div>
+                {% if form.beneficiary_message.vars.errors|length %}
+                    <p class="Input-error">{{ form.beneficiary_message.vars.errors|first.message }}</p>
+                {% endif %}
+            </div>
+            {% do form.beneficiary_message.setRendered %}
+
+            <button type="submit" class="button button-style w-max">
+                {{ 'Add to cart'|theliagiftcard_trans }}
+            </button>
+        {{ form_end(form) }}
+    </section>
+</div>

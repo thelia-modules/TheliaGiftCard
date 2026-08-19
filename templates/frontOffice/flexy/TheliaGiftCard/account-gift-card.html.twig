@@ -8,118 +8,142 @@
    the domain suffix is that directory's name. Rewording a key here means updating fr_FR, en_US
    and de_DE in the same commit.
 
-   Styling is module-owned (gift-card.css, semantic class names): the Flexy theme compiles its
-   Tailwind CSS by scanning its own directories only, so a utility class used here alone would
-   simply not exist in the stylesheet the page loads. #}
+   Styling follows the Flexy design system by reusing ITS class names — `container-l`, `h4`,
+   `paragraph-*`, `Input*` for the fields, `button button-style` for the actions — so the block
+   reads as a part of the theme rather than as a module bolted on. Those classes come from the
+   theme's own stylesheets, which is why they are available even though the theme's Tailwind
+   build never scans this directory. The module stylesheet only adds what Flexy has no class
+   for: the block's own frame, the table and its badges, all of them built on the theme's design
+   tokens (var(--color-…)) with a fallback, so the block degrades gracefully on another theme. #}
 <link rel="stylesheet" href="{{ module_asset('TheliaGiftCard', 'TheliaGiftCard/assets/gift-card.css') }}">
 
-<section class="theliaGiftCard">
-    <h2 class="theliaGiftCard_title">{{ 'Gift Card'|theliagiftcard_trans }}</h2>
+<div class="container-l theliaGiftCard_container">
+    {# Same width as the account page's own two-column grid, so the block lines up with the cards
+       above it instead of overflowing them. #}
+    <section class="theliaGiftCard theliaGiftCard-narrow">
+        <header class="theliaGiftCard_header">
+            <h2 class="h4 theliaGiftCard_title">{{ 'Gift Card'|theliagiftcard_trans }}</h2>
+            <p class="paragraph-5 theliaGiftCard_lead">{{ 'The amount of the card may be used repeatedly as needed until the end period or until used up.'|theliagiftcard_trans }}</p>
+        </header>
 
-    {# getForm() gives back the submitted form when the activation failed, with its errors and the
-       general message the controller pushed into the ParserContext. #}
-    {% set form = getForm('activate_gift_card_to_customer') %}
+        {# getForm() gives back the submitted form when the activation failed, with its errors and
+           the general message the controller pushed into the ParserContext. #}
+        {% set form = getForm('activate_gift_card_to_customer') %}
+        {% set codeErrors = form.code_gift_card.vars.errors %}
 
-    {{ form_start(form, {
-        action: path('gift_card_activate'),
-        method: 'POST',
-        attr: {class: 'theliaGiftCard_form'},
-    }) }}
-        {{ form_row(form.success_url, {value: path('account_index')}) }}
-        {{ form_row(form.error_url, {value: path('account_index')}) }}
+        {{ form_start(form, {
+            action: path('gift_card_activate'),
+            method: 'POST',
+            attr: {class: 'flex flex-col gap-5 w-full'},
+        }) }}
+            {{ form_row(form.success_url, {value: path('account_index')}) }}
+            {{ form_row(form.error_url, {value: path('account_index')}) }}
 
-        {% if form.vars.errors|length %}
-            <p class="theliaGiftCard_error">{{ form.vars.errors|first.message }}</p>
-        {% endif %}
-
-        <div class="theliaGiftCard_inline">
-            <div class="theliaGiftCard_field">
-                <label class="theliaGiftCard_label" for="{{ form.code_gift_card.vars.id }}">
-                    {{ form.code_gift_card.vars.label }}
-                </label>
-                {{ form_widget(form.code_gift_card, {attr: {class: 'theliaGiftCard_input'}}) }}
-                {% if form.code_gift_card.vars.errors|length %}
-                    <p class="theliaGiftCard_error">{{ form.code_gift_card.vars.errors|first.message }}</p>
-                {% endif %}
-            </div>
-
-            <button type="submit" class="theliaGiftCard_button">
-                {{ 'Add Gift Card'|theliagiftcard_trans }}
-            </button>
-        </div>
-    {{ form_end(form) }}
-
-    {# loop() is the Twig counterpart of the Smarty {loop}: this module exposes its gift cards
-       through a loop, not through an API resource, so resources() has nothing to read here.
-
-       The type is `gift_card_list`, NOT the `gift.card.list` name declared in Config/config.xml:
-       Thelia 3 builds the loop registry from the loop CLASS name (GiftCardList => gift-card-list,
-       underscores normalised to dashes), and an unknown type is logged and returns no row — an
-       empty table, never an error. #}
-    {% set giftCards = loop('customer.gift.card', 'gift_card_list', {
-        customer: 'current',
-        expired: false,
-        desactivate: false,
-    }) %}
-
-    {% if giftCards|length %}
-        <h3 class="theliaGiftCard_subtitle">{{ 'Yours Gift Cards'|theliagiftcard_trans }}</h3>
-
-        <div class="theliaGiftCard_tableWrapper">
-            <table class="theliaGiftCard_table">
-                <caption class="theliaGiftCard_caption">{{ 'List of Gift Card'|theliagiftcard_trans }}</caption>
-                <thead>
-                    <tr>
-                        <th scope="col">{{ 'Code'|theliagiftcard_trans }}</th>
-                        <th scope="col">{{ 'From'|theliagiftcard_trans }}</th>
-                        <th scope="col">{{ 'Activation Date'|theliagiftcard_trans }}</th>
-                        <th scope="col">{{ 'Expiration Date'|theliagiftcard_trans }}</th>
-                        <th scope="col">{{ 'Amount'|theliagiftcard_trans }}</th>
-                        <th scope="col">{{ 'Amount spend'|theliagiftcard_trans }}</th>
-                        <th scope="col">{{ 'Status'|theliagiftcard_trans }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for card in giftCards %}
-                        <tr>
-                            <td>{{ card.CODE }}</td>
-                            <td>
-                                {%- if card.SPONSOR_CUSTOMER_ID -%}
-                                    {%- for sponsor in loop('sponsor.customer', 'customer', {id: card.SPONSOR_CUSTOMER_ID, current: false}) -%}
-                                        {{ sponsor.FIRSTNAME }} {{ sponsor.LASTNAME }}
-                                    {%- endfor -%}
-                                {%- else -%}
-                                    {{ config('store_name') }}
-                                {%- endif -%}
-                            </td>
-                            <td>{{ card.CREATE_AT }}</td>
-                            <td>{{ card.EXPIRATION_DATE }}</td>
-                            <td>{{ format_money(card.AMOUNT) }}</td>
-                            <td>{{ format_money(card.SPEND_AMOUNT) }}</td>
-                            <td>
-                                {% if card.STATUS == 1 %}
-                                    {% if card.EXPIRED == 1 %}
-                                        {{ 'Expired'|theliagiftcard_trans }}
-                                    {% else %}
-                                        {{ 'Activate'|theliagiftcard_trans }}
-                                    {% endif %}
-                                {% else %}
-                                    {{ 'Desactivate'|theliagiftcard_trans }}
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <p class="theliaGiftCard_empty">
-            {{ 'You don\'t have Gift Card yet.'|theliagiftcard_trans }}
-            {% if giftCardCategoryUrl %}
-                <a class="theliaGiftCard_link" href="{{ giftCardCategoryUrl }}">
-                    {{ 'Buy a gift card'|theliagiftcard_trans }}
-                </a>
+            {% if form.vars.errors|length %}
+                <p class="Input-error paragraph-5" role="alert">{{ form.vars.errors|first.message }}</p>
             {% endif %}
-        </p>
-    {% endif %}
-</section>
+
+            <div class="theliaGiftCard_inline">
+                <div class="Input theliaGiftCard_codeField">
+                    <div class="Input-header">
+                        <label class="Input-label" for="{{ form.code_gift_card.vars.id }}">
+                            {{ form.code_gift_card.vars.label }}
+                        </label>
+                    </div>
+                    <div class="Input-blockInput">
+                        {{ form_widget(form.code_gift_card, {attr: {
+                            class: 'Input-input theliaGiftCard_codeInput' ~ (codeErrors|length ? ' is-error' : ''),
+                            autocomplete: 'off',
+                        }}) }}
+                    </div>
+                    {% if codeErrors|length %}
+                        <p class="Input-error">{{ codeErrors|first.message }}</p>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="button button-style theliaGiftCard_submit">
+                    {{ 'Add Gift Card'|theliagiftcard_trans }}
+                </button>
+            </div>
+        {{ form_end(form) }}
+
+        {# loop() is the Twig counterpart of the Smarty {loop}: this module exposes its gift cards
+           through a loop, not through an API resource, so resources() has nothing to read here.
+
+           The type is `gift_card_list`, NOT the `gift.card.list` name declared in
+           Config/config.xml: Thelia 3 builds the loop registry from the loop CLASS name
+           (GiftCardList => gift-card-list, underscores normalised to dashes), and an unknown type
+           is logged and returns no row — an empty table, never an error. #}
+        {% set giftCards = loop('customer.gift.card', 'gift_card_list', {
+            customer: 'current',
+            expired: false,
+            desactivate: false,
+        }) %}
+
+        {% if giftCards|length %}
+            <div class="theliaGiftCard_list">
+                <h3 class="paragraph-6 theliaGiftCard_subtitle">{{ 'Yours Gift Cards'|theliagiftcard_trans }}</h3>
+
+                {# Each cell repeats its column name in data-label: under 48rem the stylesheet drops
+                   the table layout and prints that label in front of the value, because seven
+                   columns never fit a phone. #}
+                <div class="theliaGiftCard_tableWrapper">
+                    <table class="theliaGiftCard_table paragraph-5">
+                        <caption class="theliaGiftCard_caption">{{ 'List of Gift Card'|theliagiftcard_trans }}</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ 'Code'|theliagiftcard_trans }}</th>
+                                <th scope="col">{{ 'From'|theliagiftcard_trans }}</th>
+                                <th scope="col">{{ 'Activation Date'|theliagiftcard_trans }}</th>
+                                <th scope="col">{{ 'Expiration Date'|theliagiftcard_trans }}</th>
+                                <th scope="col" class="theliaGiftCard_numeric">{{ 'Amount'|theliagiftcard_trans }}</th>
+                                <th scope="col" class="theliaGiftCard_numeric">{{ 'Amount spend'|theliagiftcard_trans }}</th>
+                                <th scope="col">{{ 'Status'|theliagiftcard_trans }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for card in giftCards %}
+                                <tr>
+                                    <td data-label="{{ 'Code'|theliagiftcard_trans }}">
+                                        <span class="theliaGiftCard_code">{{ card.CODE }}</span>
+                                    </td>
+                                    <td data-label="{{ 'From'|theliagiftcard_trans }}">
+                                        {%- if card.SPONSOR_CUSTOMER_ID -%}
+                                            {%- for sponsor in loop('sponsor.customer', 'customer', {id: card.SPONSOR_CUSTOMER_ID, current: false}) -%}
+                                                {{ sponsor.FIRSTNAME }} {{ sponsor.LASTNAME }}
+                                            {%- endfor -%}
+                                        {%- else -%}
+                                            {{ config('store_name') }}
+                                        {%- endif -%}
+                                    </td>
+                                    <td data-label="{{ 'Activation Date'|theliagiftcard_trans }}">{{ card.CREATE_AT }}</td>
+                                    <td data-label="{{ 'Expiration Date'|theliagiftcard_trans }}">{{ card.EXPIRATION_DATE }}</td>
+                                    <td data-label="{{ 'Amount'|theliagiftcard_trans }}" class="theliaGiftCard_numeric">{{ format_money(card.AMOUNT) }}</td>
+                                    <td data-label="{{ 'Amount spend'|theliagiftcard_trans }}" class="theliaGiftCard_numeric">{{ format_money(card.SPEND_AMOUNT) }}</td>
+                                    <td data-label="{{ 'Status'|theliagiftcard_trans }}">
+                                        {% if card.STATUS != 1 %}
+                                            <span class="theliaGiftCard_badge">{{ 'Desactivate'|theliagiftcard_trans }}</span>
+                                        {% elseif card.EXPIRED == 1 %}
+                                            <span class="theliaGiftCard_badge">{{ 'Expired'|theliagiftcard_trans }}</span>
+                                        {% else %}
+                                            <span class="theliaGiftCard_badge theliaGiftCard_badge-on">{{ 'Activate'|theliagiftcard_trans }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <p class="paragraph-5 theliaGiftCard_empty">
+                <span>{{ 'You don\'t have Gift Card yet.'|theliagiftcard_trans }}</span>
+                {% if giftCardCategoryUrl %}
+                    <a class="theliaGiftCard_link" href="{{ giftCardCategoryUrl }}">
+                        {{ 'Buy a gift card'|theliagiftcard_trans }}
+                    </a>
+                {% endif %}
+            </p>
+        {% endif %}
+    </section>
+</div>
