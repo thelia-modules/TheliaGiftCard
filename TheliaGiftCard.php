@@ -82,7 +82,7 @@ class TheliaGiftCard extends AbstractPaymentModule
         return $code;
     }
 
-    public function postActivation(ConnectionInterface $con = null): void
+    public function postActivation(?ConnectionInterface $con = null): void
     {
         try {
             GiftCardQuery::create()->findOne();
@@ -98,7 +98,7 @@ class TheliaGiftCard extends AbstractPaymentModule
         $this->handleGiftCardTemplate($locale);
     }
 
-    public function update($currentVersion, $newVersion, ConnectionInterface $con = null): void
+    public function update($currentVersion, $newVersion, ?ConnectionInterface $con = null): void
     {
         $finder = Finder::create()
             ->name('*.sql')
