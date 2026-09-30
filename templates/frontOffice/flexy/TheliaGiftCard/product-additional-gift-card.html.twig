@@ -44,9 +44,8 @@
                (see its address form): Flexy stacks consecutive .Input with a margin, and cancels
                that margin as soon as the container carries a gap-* class.
 
-               required: false on every field — none of them carries a NotBlank constraint, and the
-               controller stores each one only when it was submitted. Symfony marks a field required
-               by default, which would block the add-to-cart on an empty message. #}
+               Both names are printed on the card: the form requires them (NotBlank), and the
+               fields keep the `required` attribute Symfony gives them. #}
             <div class="grid sm:grid-cols-2 gap-5">
                 {% for field in [form.sponsor_name, form.beneficiary_name] %}
                     <div class="Input">
@@ -54,7 +53,7 @@
                             <label class="Input-label" for="{{ field.vars.id }}">{{ field.vars.label }}</label>
                         </div>
                         <div class="Input-blockInput">
-                            {{ form_widget(field, {required: false, attr: {
+                            {{ form_widget(field, {attr: {
                                 class: 'Input-input' ~ (field.vars.errors|length ? ' is-error' : ''),
                             }}) }}
                         </div>

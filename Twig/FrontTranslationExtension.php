@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-/*************************************************************************************/
-/*      Copyright (c) BERTRAND TOURLONIAS                                            */
-/*      email : btourlonias@openstudio.fr                                            */
-/*************************************************************************************/
+/*      Copyright (c) BERTRAND TOURLONIAS */
+/*      email : btourlonias@openstudio.fr */
 
 namespace TheliaGiftCard\Twig;
 
@@ -26,7 +24,8 @@ use Twig\TwigFilter;
  * requests, and it ships inside the composer-installed `default-twig` theme. Hence a
  * module-local filter: it works whichever themes are installed.
  *
- * Back-office templates keep using `|trans({}, 'theliagiftcard.bo.default-twig')`.
+ * Back-office templates keep using `|trans({}, 'theliagiftcard.bo.default-twig')`. The email
+ * and PDF templates use this filter too, with their domain and locale.
  */
 final class FrontTranslationExtension extends AbstractExtension
 {
@@ -46,14 +45,19 @@ final class FrontTranslationExtension extends AbstractExtension
      * Not marked `is_safe`: the return value is plain text and must keep being autoescaped by
      * Twig. Catalogue entries are editable from the back-office.
      *
+     * The email and PDF templates pass their own domain and the language of the card: they are
+     * rendered in the back-office language of the administrator who sends it, not in the
+     * language of the request.
+     *
      * @param array<string, string|int|float> $parameters
      */
-    public function trans(?string $message, array $parameters = []): string
+    public function trans(?string $message, array $parameters = [], ?string $domain = null, ?string $locale = null): string
     {
         return $this->translator->trans(
             $message,
             $parameters,
-            TheliaGiftCard::FRONT_TRANSLATION_DOMAIN
+            $domain ?? TheliaGiftCard::FRONT_TRANSLATION_DOMAIN,
+            $locale
         );
     }
 }

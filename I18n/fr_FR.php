@@ -34,5 +34,10 @@ return array(
     'FORM_ADD_EMAIL_STATUS_ID'                  => 'Statut de commande',
     'FORM_ADD_EMAIL_SUBJECT'                    => 'Sujet de l\'email',
     'FORM_ADD_EMAIL_TEXT'                       => 'Texte de l\'email',
-    'Gift Card amount' => 'Montant Carte Cadeau'
+    'Gift Card amount' => 'Montant Carte Cadeau',
+    'Too many attempts. Please try again later.' => 'Trop de tentatives. Merci de réessayer plus tard.',
+    'This code is not valid, not activated or already used.' => 'Ce code est incorrect, non activé ou déjà utilisé.',
+    'Sorry, an error occurred.' => 'Désolé, une erreur est survenue.',
+    'No gift card carries this code.' => 'Aucune carte cadeau ne porte ce code.',
+    'The gift card could not be sent.' => 'La carte cadeau n\'a pas pu être envoyée.',
 );

@@ -1,0 +1,24 @@
+{#
+    Gift card sent by email from the back-office, with the card as a PDF attachment.
+    Rendered by TheliaGiftCard\Service\GiftCardEmailService in `gift_card_locale`, the back-office
+    language of the administrator. `email_text` is the body the administrator validated in the
+    send window (HTML, written in the back-office): it is printed as is.
+    A shop changes the wording in its own email theme, with a file of the same name.
+#}
+{% extends "email-layout.html.twig" %}
+
+{% block browser %}{% endblock %}
+
+{% block image_header %}{% endblock %}
+
+{% block pre_header %}{% endblock %}
+
+{% block email_subject %}{{ email_subject }}{% endblock %}
+
+{% block email_title %}{{ email_subject }}{% endblock %}
+
+{% block email_content %}
+<div>
+    {{ email_text|raw }}
+</div>
+{% endblock %}

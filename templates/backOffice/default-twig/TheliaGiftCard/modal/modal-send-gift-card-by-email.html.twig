@@ -21,12 +21,14 @@
                     </div>
                     <div class="mb-3">
                         {{ form_label(form.email_subject) }}
-                        {{ form_widget(form.email_subject, { attr: { class: 'form-control' }, value: 'Votre carte cadeau au format numérique.'|trans({}, 'theliagiftcard.bo.default') }) }}
+                        {{ form_widget(form.email_subject, { attr: { class: 'form-control' }, value: email_default_subject|default('') }) }}
                         {{ form_errors(form.email_subject) }}
                     </div>
                     <div class="mb-3">
                         {{ form_label(form.email_text) }}
-                        {{ form_widget(form.email_text, { attr: { class: 'form-control', rows: 8 } }) }}
+                        {# Prefilled with the default body of the email theme (gift_card_email_text.html.twig),
+                           which a shop overrides in its own email theme. #}
+                        {{ form_widget(form.email_text, { attr: { class: 'form-control', rows: 8 }, value: email_default_text|default('') }) }}
                         {{ form_errors(form.email_text) }}
                     </div>
                     {{ form_rest(form) }}

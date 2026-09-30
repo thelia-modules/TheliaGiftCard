@@ -41,7 +41,7 @@
     </div>
 </div>
 
-{% include 'TheliaGiftCard/modal/modal-send-gift-card-by-email.html.twig' with { form: email_form } only %}
+{% include 'TheliaGiftCard/modal/modal-send-gift-card-by-email.html.twig' with { form: email_form, email_default_subject: email_default_subject, email_default_text: email_default_text } only %}
 {% include 'TheliaGiftCard/modal/modal_manualy_create_gift_card.html.twig' with { form: create_form } only %}
 {% include 'TheliaGiftCard/modal/modal_edit_create_gift_card.html.twig' with { form: edit_form } only %}
 {% include 'TheliaGiftCard/modal/config_gift_card.html.twig' with { form: config_form } only %}

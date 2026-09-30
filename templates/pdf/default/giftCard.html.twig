@@ -1,0 +1,59 @@
+{#
+    Printable gift card, turned into a PDF by the GENERATE_PDF event (dompdf).
+    Rendered by TheliaGiftCard\Service\GiftCardEmailService in `gift_card_locale`, the back-office
+    language of the administrator who downloads or sends the card.
+
+    Variables: code, amount, currency_id, expiration_date, sponsor_name, beneficiary_name, message, store_name.
+    The names and the message are typed by the buyer: they are escaped, never printed raw.
+
+    Generic on purpose. A shop gives the card its own look in its PDF theme, with a
+    giftCard.html.twig of its own.
+#}
+{% set domain = 'theliagiftcard.pdf.default' %}
+<style>
+{% verbatim %}
+    @page { margin: 15mm; }
+    body { font-family: DejaVu Sans, sans-serif; color: #333333; }
+    .card { border: 1px solid #cccccc; padding: 12mm; text-align: center; }
+    .store { font-size: 14px; color: #666666; margin: 0 0 4mm; }
+    .title { font-size: 28px; margin: 0 0 8mm; }
+    .amount { font-size: 48px; font-weight: bold; margin: 0 0 8mm; }
+    .code-label { font-size: 11px; color: #666666; margin: 0; }
+    .code { font-size: 20px; letter-spacing: 2px; margin: 1mm 0 8mm; }
+    .people { font-size: 12px; margin: 0 0 4mm; }
+    .people p { margin: 0 0 1mm; }
+    .message { font-size: 12px; margin: 0 0 8mm; }
+    .validity { font-size: 11px; margin: 0; }
+    .terms { font-size: 9px; color: #666666; margin-top: 8mm; text-align: left; }
+{% endverbatim %}
+</style>
+
+<div class="card">
+    <p class="store">{{ store_name }}</p>
+    <h1 class="title">{{ 'Gift card'|theliagiftcard_trans({}, domain, gift_card_locale) }}</h1>
+
+    <p class="amount">{{ format_money(amount, currency_id, gift_card_locale) }}</p>
+
+    <p class="code-label">{{ 'Activation code'|theliagiftcard_trans({}, domain, gift_card_locale) }}</p>
+    <p class="code">{{ code }}</p>
+
+    {% if sponsor_name or beneficiary_name %}
+        <div class="people">
+            {% if sponsor_name %}<p>{{ 'From:'|theliagiftcard_trans({}, domain, gift_card_locale) }} <strong>{{ sponsor_name }}</strong></p>{% endif %}
+            {% if beneficiary_name %}<p>{{ 'For:'|theliagiftcard_trans({}, domain, gift_card_locale) }} <strong>{{ beneficiary_name }}</strong></p>{% endif %}
+        </div>
+    {% endif %}
+
+    {% if message %}
+        <div class="message">{{ message|nl2br }}</div>
+    {% endif %}
+
+    {% if expiration_date %}
+        <p class="validity">{{ 'Valid until %date%'|theliagiftcard_trans({'%date%': format_date(expiration_date, 'date', null, gift_card_locale)}, domain, gift_card_locale) }}</p>
+    {% endif %}
+</div>
+
+<div class="terms">
+    <p><strong>{{ 'Terms of use'|theliagiftcard_trans({}, domain, gift_card_locale) }}</strong></p>
+    <p>{{ 'Activate the card with its code in your customer account, then spend it in one or several orders until it expires. The card can be neither exchanged for cash nor extended, even partly used.'|theliagiftcard_trans({}, domain, gift_card_locale) }}</p>
+</div>
