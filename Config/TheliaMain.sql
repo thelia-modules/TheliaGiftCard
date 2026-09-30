@@ -24,6 +24,7 @@ CREATE TABLE `gift_card`
     `created_at` DATETIME,
     `updated_at` DATETIME,
     PRIMARY KEY (`id`),
+    UNIQUE INDEX `gift_card_code_unique` (`code`),
     INDEX `fi_card_gift_sponsor_customer` (`sponsor_customer_id`),
     INDEX `fi_card_gift_beneficiary_customer` (`beneficiary_customer_id`),
     INDEX `fi_gift_card_order` (`order_id`),

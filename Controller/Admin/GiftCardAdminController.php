@@ -8,7 +8,11 @@ namespace TheliaGiftCard\Controller\Admin;
 
 use Propel\Runtime\Exception\PropelException;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Thelia\Controller\Admin\BaseAdminController;
+use Thelia\Core\Security\AccessManager;
+use Thelia\Core\Security\Resource\AdminResources;
+use TheliaGiftCard\TheliaGiftCard;
 
 use TheliaGiftCard\Model\GiftCardInfoCartQuery;
 use TheliaGiftCard\Model\GiftCardOrder;
@@ -30,8 +34,12 @@ class GiftCardAdminController extends BaseAdminController
      * @throws PropelException
      */
     #[Route('/show/{code}', name: 'gift_card_admin')]
-    public function showGiftCard(string $code, Request $request): JsonResponse
+    public function showGiftCard(string $code, Request $request): JsonResponse|Response
     {
+        if (null !== $response = $this->checkAuth(AdminResources::MODULE, [TheliaGiftCard::MODULE_CODE], AccessManager::VIEW)) {
+            return $response;
+        }
+
         $tab = [];
 
         if (!$giftCard = GiftCardQuery::create()->findOneByCode($code)) {
@@ -76,8 +84,12 @@ class GiftCardAdminController extends BaseAdminController
     /**
      */
     #[Route('/show', name: 'gift_card_show_list')]
-    public function showGiftCardsList(Request $request): JsonResponse
+    public function showGiftCardsList(Request $request): JsonResponse|Response
     {
+        if (null !== $response = $this->checkAuth(AdminResources::MODULE, [TheliaGiftCard::MODULE_CODE], AccessManager::VIEW)) {
+            return $response;
+        }
+
         $json = [
             "data" => []
         ];

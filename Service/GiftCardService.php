@@ -2,9 +2,7 @@
 
 namespace TheliaGiftCard\Service;
 
-use Exception;
 use Front\Front;
-use PDO;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\ActiveQuery\Join;
 use Propel\Runtime\Exception\PropelException;
@@ -29,14 +27,12 @@ use TheliaGiftCard\TheliaGiftCard;
 
 class GiftCardService
 {
-
     public function __construct(
-        protected RequestStack             $requestStack,
+        protected RequestStack $requestStack,
         protected EventDispatcherInterface $dispatcher,
-        private readonly ContainerInterface       $container,
+        private readonly ContainerInterface $container,
         private readonly EventDispatcherInterface $eventDispatcher,
-    )
-    {
+    ) {
     }
 
     public function getAvailableGiftCardAmount(GiftCard $giftCard): float
@@ -62,16 +58,24 @@ class GiftCardService
         $giftCardJoin->setJoinType(Criteria::RIGHT_JOIN);
 
         $query->addJoinObject($giftCardJoin, 'test-code-join');
-        $query->where(GiftCardTableMap::COL_CODE . ' = ?', $code, PDO::PARAM_STR);
+        $query->where(GiftCardTableMap::COL_CODE.' = ?', $code, \PDO::PARAM_STR);
 
         $query
-            ->withColumn(GiftCardTableMap::COL_CODE,
+            ->withColumn(
+                GiftCardTableMap::COL_CODE,
                 'code'
             );
 
         $query
-            ->withColumn(GiftCardTableMap::COL_AMOUNT,
+            ->withColumn(
+                GiftCardTableMap::COL_AMOUNT,
                 'amount'
+            );
+
+        $query
+            ->withColumn(
+                GiftCardTableMap::COL_EXPIRATION_DATE,
+                'expirationDate'
             );
 
         $infosCard = $query->findOne();
@@ -85,6 +89,7 @@ class GiftCardService
                 'beneficiaryAddress' => $infosCard->getBeneficiaryAddress(),
                 'beneficiaryEmail' => $infosCard->getBeneficiaryEmail(),
                 'amount' => $infosCard->getVirtualColumn('amount'),
+                'expirationDate' => $infosCard->getVirtualColumn('expirationDate'),
             ];
         }
 
@@ -103,13 +108,12 @@ class GiftCardService
             GiftCardCartQuery::create()
                 ->filterByCartId($cartId)
                 ->delete();
-
-        } catch (Exception $ex) {
+        } catch (\Exception $ex) {
             Tlog::getInstance()->addError($ex->getMessage());
         }
     }
 
-    public function isGiftCardPayment():bool
+    public function isGiftCardPayment(): bool
     {
         $request = $this->requestStack->getCurrentRequest();
         if (null === $request || !$request->hasSession()) {
@@ -132,17 +136,17 @@ class GiftCardService
         $orderPostage = $this->getPostage($cart, $chosenDeliveryAddress, $order->getDeliveryModuleId());
         $total = $totalCartAmount + $orderPostage;
 
-        //Ugly fix cause wtf moment with float !!
-        return (string)$total == (string)TheliaGiftCard::getTotalCartGiftCardAmount($cart->getId());
+        // Ugly fix cause wtf moment with float !!
+        return (string) $total == (string) TheliaGiftCard::getTotalCartGiftCardAmount($cart->getId());
     }
 
     /**
-     * @throws Exception
+     * @throws \Exception
      */
     public function getPostage(Cart $cart, Address $chosenDeliveryAddress, int $deliveryModuleId): float
     {
         if (!$deliveryModule = ModuleQuery::create()->findPk($deliveryModuleId)) {
-            throw new Exception(Translator::getInstance()->trans('Delivery Module missing', [], TheliaGiftCard::DOMAIN_NAME));
+            throw new \Exception(Translator::getInstance()->trans('Delivery Module missing', [], TheliaGiftCard::DOMAIN_NAME));
         }
 
         $moduleInstance = $deliveryModule->getDeliveryModuleInstance($this->container);
@@ -155,9 +159,7 @@ class GiftCardService
         );
 
         if (!$deliveryPostageEvent->isValidModule()) {
-            throw new DeliveryException(
-                Translator::getInstance()->trans('The delivery module is not valid.', [], Front::MESSAGE_DOMAIN)
-            );
+            throw new DeliveryException(Translator::getInstance()->trans('The delivery module is not valid.', [], Front::MESSAGE_DOMAIN));
         }
 
         $postage = $deliveryPostageEvent->getPostage()->getAmount();

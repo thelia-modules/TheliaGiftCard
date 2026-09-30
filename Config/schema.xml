@@ -33,6 +33,10 @@
             <reference foreign="id" local="product_id" />
         </foreign-key>
 
+        <unique name="gift_card_code_unique">
+            <unique-column name="code" />
+        </unique>
+
         <behavior name="timestampable" />
     </table>
 

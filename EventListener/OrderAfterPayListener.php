@@ -1,8 +1,9 @@
 <?php
-/*************************************************************************************/
-/*      Copyright (c) BERTRAND TOURLONIAS                                            */
-/*      email : btourlonias@openstudio.fr                                            */
-/*************************************************************************************/
+
+declare(strict_types=1);
+
+/*      Copyright (c) BERTRAND TOURLONIAS */
+/*      email : btourlonias@openstudio.fr */
 
 namespace TheliaGiftCard\EventListener;
 
@@ -12,9 +13,12 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Event\Order\OrderEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Model\CartItemQuery;
+use Thelia\Model\Order;
 use Thelia\Model\OrderProduct;
 use TheliaGiftCard\Model\GiftCardOrder;
 use TheliaGiftCard\Model\GiftCardOrderQuery;
+use TheliaGiftCard\Model\GiftCardQuery;
+use TheliaGiftCard\Model\Map\GiftCardTableMap;
 use TheliaGiftCard\TheliaGiftCard;
 
 class OrderAfterPayListener implements EventSubscriberInterface
@@ -26,33 +30,33 @@ class OrderAfterPayListener implements EventSubscriberInterface
     /**
      * @throws PropelException
      */
-    public function onOrderAfterPayGiftCard(OrderEvent $event)
+    public function onOrderAfterPayGiftCard(OrderEvent $event): void
     {
-        //on reset le postage prévu et on delete les orders produits de carte cadeaux
+        // on reset le postage prévu et on delete les orders produits de carte cadeaux
 
         $order = $event->getPlacedOrder();
         $orderGiftCards = GiftCardOrderQuery::create()
             ->filterByOrderId($order->getId())
             ->find();
 
-        if (count($orderGiftCards) === 0) {
-            return null;
+        if (0 === \count($orderGiftCards)) {
+            return;
         }
 
-        $postage = 0;
+        $postage = '0';
 
         /** @var GiftCardOrder $orderGiftCard */
         foreach ($orderGiftCards as $orderGiftCard) {
-            $postage = $orderGiftCard->getInitialPostage();
+            $postage = (string) $orderGiftCard->getInitialPostage();
         }
 
         $orderProducts = $order->getOrderProducts();
 
         /** @var OrderProduct $orderProduct */
         foreach ($orderProducts as $orderProduct) {
-            if ($orderProduct->getProductRef() == TheliaGiftCard::GIFT_CARD_CART_PRODUCT_REF) {
+            if (TheliaGiftCard::GIFT_CARD_CART_PRODUCT_REF === $orderProduct->getProductRef()) {
                 $orderProduct->delete();
-                if($orderProduct->getCartItemId()){
+                if ($orderProduct->getCartItemId()) {
                     CartItemQuery::create()
                         ->filterById($orderProduct->getCartItemId())
                         ->delete();
@@ -63,41 +67,62 @@ class OrderAfterPayListener implements EventSubscriberInterface
         $order
             ->setPostage($postage)
             ->save();
+    }
 
+    /**
+     * A cancelled or refunded order gives back what it spent from gift cards, and takes back the
+     * cards it bought as long as nothing was spent from them: a card already used stays as it is, the
+     * shop settles the rest with the customer.
+     *
+     * @throws PropelException
+     */
+    public function onOrderCancelGiftCard(OrderEvent $event): void
+    {
+        $order = $event->getOrder();
+
+        // A refunded order is taken back like a cancelled one: the buyer got the money back.
+        if (!$order->isCancelled() && !$order->isRefunded()) {
+            return;
+        }
+
+        $this->creditSpentAmounts($order);
+        $this->disableUnspentPurchasedCards($order);
     }
 
     /**
      * @throws PropelException
      */
-    public function onOrderCancelGiftCard(OrderEvent $event): void
+    private function creditSpentAmounts(Order $order): void
     {
-        // Delete le montant dépensé par une carte cadeau sur une annulation d'order
-        if ($event->getOrder()->getOrderStatus()->getCode() == 'canceled') {
-            $order = $event->getOrder();
+        $giftCardsOrder = GiftCardOrderQuery::create()
+            ->filterByOrderId($order->getId())
+            ->find();
 
-            $giftCardsOrder = GiftCardOrderQuery::create()
-                ->filterByOrderId($order->getId())
-                ->find();
+        /** @var GiftCardOrder $giftCardOrder */
+        foreach ($giftCardsOrder as $giftCardOrder) {
+            $currentGiftCard = $giftCardOrder->getGiftCard();
 
-            /** @var GiftCardOrder $giftCardOrder */
-            foreach ($giftCardsOrder as $giftCardOrder) {
-                $currentGiftCard = $giftCardOrder->getGiftCard();
+            $currentGiftCard
+                ->setSpendAmount(bcsub((string) ($currentGiftCard->getSpendAmount() ?? '0'), (string) ($giftCardOrder->getSpendAmount() ?? '0'), 6))
+                ->save();
 
-                $currentSpendAmount = $giftCardOrder->getSpendAmount();
-
-                $currentGiftCard
-                    ->setSpendAmount($currentGiftCard->getSpendAmount() - $currentSpendAmount )
-                    ->save();
-
-                $giftCardOrder->delete();
-            }
+            $giftCardOrder->delete();
         }
+    }
+
+    private function disableUnspentPurchasedCards(Order $order): void
+    {
+        GiftCardQuery::create()
+            ->filterByOrderId($order->getId())
+            ->filterByStatus(1)
+            ->where('COALESCE('.GiftCardTableMap::COL_SPEND_AMOUNT.', 0) <= 0')
+            ->update(['Status' => 0]);
     }
 
     public static function getSubscribedEvents(): array
     {
         return [
-            TheliaEvents::ORDER_UPDATE_STATUS => ['onOrderCancelGiftCard', 1]
+            TheliaEvents::ORDER_UPDATE_STATUS => ['onOrderCancelGiftCard', 1],
         ];
     }
 }

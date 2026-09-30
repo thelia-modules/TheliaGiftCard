@@ -1,14 +1,17 @@
 <?php
-/*************************************************************************************/
-/*      Copyright (c) BERTRAND TOURLONIAS                                            */
-/*      email : btourlonias@openstudio.fr                                            */
-/*************************************************************************************/
+
+declare(strict_types=1);
+
+/*      Copyright (c) BERTRAND TOURLONIAS */
+/*      email : btourlonias@openstudio.fr */
 
 namespace TheliaGiftCard\Form;
 
+use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Validator\Constraints\Email;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Thelia\Form\BaseForm;
 use TheliaGiftCard\TheliaGiftCard;
@@ -27,10 +30,10 @@ class GiftCardCustomerEmailForm extends BaseForm
                 'gift_card_code',
                 HiddenType::class,
                 [
-                    "required" => true,
-                    "constraints" => [
-                        new NotBlank()
-                    ]
+                    'required' => true,
+                    'constraints' => [
+                        new NotBlank(),
+                    ],
                 ]
             )
             ->add(
@@ -39,9 +42,9 @@ class GiftCardCustomerEmailForm extends BaseForm
                 [
                     'label' => $this->translator->trans('FORM_ADD_EMAIL_SUBJECT', [], TheliaGiftCard::DOMAIN_NAME),
                     'label_attr' => [
-                        'for' => 'giftcard_email_subject'
+                        'for' => 'giftcard_email_subject',
                     ],
-                    "required" => false,
+                    'required' => false,
                 ]
             )
             ->add(
@@ -50,23 +53,24 @@ class GiftCardCustomerEmailForm extends BaseForm
                 [
                     'label' => $this->translator->trans('FORM_ADD_EMAIL_TEXT', [], TheliaGiftCard::DOMAIN_NAME),
                     'label_attr' => [
-                        'for' => 'giftcard_email_text'
+                        'for' => 'giftcard_email_text',
                     ],
-                    "required" => false,
+                    'required' => false,
                 ]
             )
             ->add(
                 'to',
-                TextType::class,
+                EmailType::class,
                 [
                     'label' => $this->translator->trans('Destinataire :', [], TheliaGiftCard::DOMAIN_NAME),
                     'label_attr' => [
-                        'for' => 'giftcard_email_to'
+                        'for' => 'giftcard_email_to',
                     ],
-                    "required" => true,
-                    "constraints" => [
-                        new NotBlank()
-                    ]
+                    'required' => true,
+                    'constraints' => [
+                        new NotBlank(),
+                        new Email(),
+                    ],
                 ]
             );
     }

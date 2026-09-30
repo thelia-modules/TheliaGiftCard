@@ -1,0 +1,20 @@
+{#
+    Default body of the gift card email: proposed in the back-office send window, and sent when
+    the administrator leaves the field empty. Generic on purpose, it names the shop from its
+    configuration; a shop writes its own text in its email theme, with a file of the same name.
+    Rendered in `gift_card_locale`, the back-office language of the administrator.
+#}
+{% set domain = 'theliagiftcard.email.default' %}
+<p>{{ 'Hello,'|theliagiftcard_trans({}, domain, gift_card_locale) }}</p>
+<p>
+    {{ 'Please find attached a gift card to use on %store%.'|theliagiftcard_trans({'%store%': store_name}, domain, gift_card_locale) }}
+    {% if store_url %}<a href="{{ store_url }}">{{ store_url }}</a>{% endif %}<br>
+    {{ 'Create your customer account, open its "Gift cards" section and type the activation code printed on the card.'|theliagiftcard_trans({}, domain, gift_card_locale) }}
+</p>
+{% if store_email %}
+<p>{{ 'Any question? Write to us at'|theliagiftcard_trans({}, domain, gift_card_locale) }} <a href="mailto:{{ store_email }}">{{ store_email }}</a></p>
+{% endif %}
+<p>
+    {{ 'See you soon,'|theliagiftcard_trans({}, domain, gift_card_locale) }}<br>
+    {{ 'The %store% team'|theliagiftcard_trans({'%store%': store_name}, domain, gift_card_locale) }}
+</p>

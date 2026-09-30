@@ -6,8 +6,6 @@
 
 namespace TheliaGiftCard\EventListener;
 
-use DateTime;
-use Exception;
 use Propel\Runtime\Exception\PropelException;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -15,14 +13,11 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Event\Order\OrderEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Model\CartItemQuery;
-use TheliaGiftCard\Model\GiftCardCart;
-use TheliaGiftCard\Model\GiftCardCartQuery;
 use TheliaGiftCard\Model\GiftCardInfoCart;
 use TheliaGiftCard\Model\GiftCardInfoCartQuery;
-use TheliaGiftCard\Model\GiftCardOrder;
-use TheliaGiftCard\Model\GiftCardOrderQuery;
-use TheliaGiftCard\Model\GiftCardQuery;
+use TheliaGiftCard\Exception\GiftCardPaymentRefusedException;
 use TheliaGiftCard\Service\GiftCardGenerateService;
+use TheliaGiftCard\Service\GiftCardPaymentService;
 use TheliaGiftCard\Service\GiftCardService;
 use TheliaGiftCard\TheliaGiftCard;
 
@@ -32,7 +27,8 @@ class OrderPayListener implements EventSubscriberInterface
         protected RequestStack            $request,
         protected GiftCardService         $giftCardService,
         protected GiftCardGenerateService $giftCardGenerateService,
-        protected EventDispatcherInterface $dispatcher
+        protected EventDispatcherInterface $dispatcher,
+        protected GiftCardPaymentService $giftCardPaymentService,
     )
     {}
 
@@ -44,65 +40,19 @@ class OrderPayListener implements EventSubscriberInterface
     }
 
     /**
-     * @throws PropelException
-     * @throws Exception
+     * @throws GiftCardPaymentRefusedException when a card of the cart can no longer pay its share
      */
     public function onOrderPayGiftCard(OrderEvent $event): void
     {
-        $order = $event->getPlacedOrder();
         $request = $this->request->getCurrentRequest();
         if (null === $request || !$request->hasSession()) {
             return;
         }
-        $cart = $request->getSession()->getSessionCart($this->dispatcher);
-        $cartId = $cart->getId();
 
-        $cartGiftCards = GiftCardCartQuery::create()
-            ->filterByCartId($cartId)
-            ->find();
-
-        /** @var GiftCardCart $cartGiftCard */
-        foreach ($cartGiftCards as $cartGiftCard) {
-            $orderGiftCard = GiftCardOrderQuery::create()
-                ->filterByOrderId($order->getId())
-                ->filterByGiftCardId($cartGiftCard->getId())
-                ->findOne();
-
-            $orderGiftCard?->delete();
-
-            $giftCard = $cartGiftCard->getGiftCard();
-
-            // test date validité
-            $dateNow = new DateTime();
-            $delta = null;
-            
-            if ($giftCard->getExpirationDate()) {
-                $delta = $dateNow->diff($giftCard->getExpirationDate())->format('%r');
-            }
-
-            if (null != $delta) {
-                return;
-            }
-
-            // Test capacité
-            if ($giftCard->getAmount() < ($giftCard->getSpendAmount() + $cartGiftCard->getSpendAmount())) {
-                return;
-            }
-
-            $newOrderGiftCard = new GiftCardOrder();
-            $newOrderGiftCard
-                ->setGiftCardId($giftCard->getId())
-                ->setOrderId($order->getId())
-                ->setSpendAmount($cartGiftCard->getSpendAmount())
-                ->setInitialPostage($order->getPostage())
-                ->save();
-
-            $currentSpendAmount = $giftCard->getSpendAmount();
-
-            $giftCard
-                ->setSpendAmount($currentSpendAmount + $cartGiftCard->getSpendAmount())
-                ->save();
-        }
+        $this->giftCardPaymentService->debitCart(
+            $event->getPlacedOrder(),
+            (int) $request->getSession()->getSessionCart($this->dispatcher)->getId()
+        );
     }
 
     /**
