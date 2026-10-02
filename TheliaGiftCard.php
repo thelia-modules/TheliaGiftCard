@@ -332,6 +332,7 @@ class TheliaGiftCard extends AbstractPaymentModule
             ->exclude([
                 __DIR__.'/I18n/*',
                 __DIR__.'/Config/**/*.php',
+                __DIR__.'/Dto/*',
                 __DIR__.'/Exception/*',
                 __DIR__.'/Model/Map/*',
                 __DIR__.'/Tests/*',

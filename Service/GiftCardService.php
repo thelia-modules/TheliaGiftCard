@@ -11,10 +11,11 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Event\Delivery\DeliveryPostageEvent;
 use Thelia\Core\Event\TheliaEvents;
+use Thelia\Core\HttpFoundation\Session\Session;
 use Thelia\Core\Translation\Translator;
 use Thelia\Log\Tlog;
+use Thelia\Domain\Module\Payment\PaymentCartContext;
 use Thelia\Model\Address;
-use Thelia\Model\AddressQuery;
 use Thelia\Model\Cart;
 use Thelia\Model\ModuleQuery;
 use Thelia\Module\Exception\DeliveryException;
@@ -32,6 +33,8 @@ class GiftCardService
         protected EventDispatcherInterface $dispatcher,
         private readonly ContainerInterface $container,
         private readonly EventDispatcherInterface $eventDispatcher,
+        private readonly PaymentCartContext $paymentCartContext,
+        private readonly GiftCardCartSpending $giftCardCartSpending,
     ) {
     }
 
@@ -113,31 +116,31 @@ class GiftCardService
         }
     }
 
-    public function isGiftCardPayment(): bool
+    /**
+     * Whether the gift cards put on the cart pay for all of it, compared in cents.
+     *
+     * The cart is the one being judged (IsValidPaymentEvent, PaymentCartContext), the session
+     * cart otherwise. The order kept in session is never read: the Thelia 3 checkout keeps the
+     * delivery choices on the cart.
+     */
+    public function isGiftCardPayment(?Cart $cart = null): bool
+    {
+        $cart ??= $this->paymentCartContext->cart() ?? $this->sessionCart();
+
+        return $cart instanceof Cart && $this->giftCardCartSpending->coversTheCart($cart);
+    }
+
+    private function sessionCart(): ?Cart
     {
         $request = $this->requestStack->getCurrentRequest();
+
         if (null === $request || !$request->hasSession()) {
-            return false;
+            return null;
         }
 
-        /** @var Cart $cart */
-        $cart = $request->getSession()->getSessionCart($this->dispatcher);
-        $order = $request->getSession()->getOrder();
+        $session = $request->getSession();
 
-        if (!$order->getDeliveryModuleId()) {
-            return false;
-        }
-
-        if (!$chosenDeliveryAddress = AddressQuery::create()->findPk($order->getChoosenDeliveryAddress())) {
-            return false;
-        }
-
-        $totalCartAmount = round($cart->getTaxedAmount($chosenDeliveryAddress->getCountry(), true, $chosenDeliveryAddress->getState()), 2);
-        $orderPostage = $this->getPostage($cart, $chosenDeliveryAddress, $order->getDeliveryModuleId());
-        $total = $totalCartAmount + $orderPostage;
-
-        // Ugly fix cause wtf moment with float !!
-        return (string) $total == (string) TheliaGiftCard::getTotalCartGiftCardAmount($cart->getId());
+        return $session instanceof Session ? $session->getSessionCart($this->dispatcher) : null;
     }
 
     /**

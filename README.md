@@ -29,6 +29,28 @@ picked in the card list for a download); the templates receive it as `gift_card_
 
 ## Changes
 
+### 3.2.0
+
+- Spending cards on the cart: `GiftCardCartSpending` lists the cards the customer can spend (`spendableCards()`:
+  beneficiary, enabled, unexpired, credit left, none when the cart holds a gift card), puts the selected ones on the
+  cart (`spend()`), takes them off (`reset()`), and tells whether they pay for all of it (`coversTheCart()`). The
+  cards together never go beyond the amount asked for nor beyond the cart total with its postage; spending them takes
+  the coupons off, as before. A theme calls it from its own component: the module still renders no block for it.
+- Everything is read from the cart, never from the order kept in session: the Thelia 3 checkout keeps the delivery
+  address, the carrier and the postage on the cart. Putting a card on the cart no longer fails on "Delivery address
+  not set yet", and a cart fully paid with cards is recognised.
+- Amounts compared in cents: cards covering a total to the cent pay for all of it (the previous comparison was made
+  on the string forms of two floats).
+- `ORDER_PAY_GET_TOTAL` deducts what was debited for the order (or, before the debit, what was put on the order's
+  cart), capped at the total: cards worth more than the total now bring it to zero instead of deducting nothing.
+- The cards are debited on `ORDER_BEFORE_PAYMENT`, before the payment module is called and before the confirmation
+  e-mails, for the order total at most: a card is never debited of more than the payment deducts, and a card refused
+  leaves an unpaid order instead of an order already marked paid.
+- The amounts put on a cart are also taken off when the quantity of a line changes (`CART_UPDATEITEM`), on the cart of
+  the event.
+- `GiftCardSpend` is deprecated in favour of `GiftCardCartSpending`; `GiftCardService::isGiftCardPayment()` takes the
+  cart to judge (the cart being paid, the session cart otherwise).
+
 ### 3.1.0
 
 - Email and PDF ported to Twig: `GiftCardEmailService` renders them through `ParserResolver` from the active email

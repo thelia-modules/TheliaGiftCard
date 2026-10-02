@@ -10,6 +10,7 @@ namespace TheliaGiftCard\Tests;
 use Thelia\Core\Event\Order\OrderEvent;
 use Thelia\Core\HttpFoundation\Session\Session;
 use Thelia\Model\Cart;
+use Thelia\Model\CartQuery;
 use Thelia\Model\Order;
 use TheliaGiftCard\EventListener\OrderPayListener;
 use TheliaGiftCard\Exception\GiftCardPaymentRefusedException;
@@ -84,21 +85,21 @@ final class GiftCardPaymentTest extends GiftCardTestCase
         self::assertSame(40.0, $this->spentOn($giftCard));
     }
 
-    public function testTheOrderPaymentEventDebitsTheCardsOfTheSessionCart(): void
+    public function testPlacingTheOrderDebitsTheCardsOfItsCartNotOfTheSession(): void
     {
         [$order, $cart] = $this->orderAndCart();
         $giftCard = $this->giftCard(['amount' => '50']);
         $this->putInCart($cart, $giftCard, '15');
+        $sessionCart = $this->createFixtureFactory()->cart($order->getCustomer());
+        $this->putInCart($sessionCart, $this->giftCard(['amount' => '50']), '40');
         $session = $this->requestStack()->getCurrentRequest()?->getSession();
         self::assertInstanceOf(Session::class, $session);
         $session->setCustomerUser($order->getCustomer());
-        $session->setSessionCart($cart);
-        $event = new OrderEvent($order);
-        $event->setPlacedOrder($order);
+        $session->setSessionCart($sessionCart);
 
         $listener = static::getContainer()->get(OrderPayListener::class);
         self::assertInstanceOf(OrderPayListener::class, $listener);
-        $listener->onOrderPayGiftCard($event);
+        $listener->onOrderPayGiftCard(new OrderEvent($order));
 
         self::assertSame(15.0, $this->spentOn($giftCard));
     }
@@ -120,8 +121,14 @@ final class GiftCardPaymentTest extends GiftCardTestCase
     {
         $fixtures = $this->createFixtureFactory();
         $customer = $fixtures->customer($fixtures->customerTitle());
+        $order = $fixtures->order($customer);
+        // The order total caps the debit: one line of 100.
+        $product = $fixtures->product($fixtures->category(), $fixtures->taxRule(['isDefault' => false]), $fixtures->currency(), ['basePrice' => 100.0]);
+        $this->orderLine($order, $product, 1, 100.0);
+        $cart = CartQuery::create()->findPk($order->getCartId());
+        self::assertInstanceOf(Cart::class, $cart);
 
-        return [$fixtures->order($customer), $fixtures->cart($customer)];
+        return [$order, $cart];
     }
 
     private function putInCart(Cart $cart, GiftCard $giftCard, string $amount): void
