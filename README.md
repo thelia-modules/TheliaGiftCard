@@ -29,6 +29,10 @@ picked in the card list for a download); the templates receive it as `gift_card_
 
 ## Changes
 
+### 3.2.1
+
+- `GiftCardPaymentRefusedException` is a checkout payment refusal (`InvalidPaymentException`) with a sentence written for the buyer, so a card that can no longer pay its share sends the buyer back to the payment step instead of failing with a 500.
+
 ### 3.2.0
 
 - Spending cards on the cart: `GiftCardCartSpending` lists the cards the customer can spend (`spendableCards()`:

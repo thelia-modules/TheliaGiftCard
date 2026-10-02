@@ -84,7 +84,7 @@ final readonly class GiftCardPaymentService
         ]);
 
         if (1 !== $statement->rowCount()) {
-            throw new GiftCardPaymentRefusedException(\sprintf('Gift card %d cannot pay %s: disabled, expired or not enough credit left.', $giftCardId, $amount));
+            throw new GiftCardPaymentRefusedException($giftCardId);
         }
 
         (new GiftCardOrder())
