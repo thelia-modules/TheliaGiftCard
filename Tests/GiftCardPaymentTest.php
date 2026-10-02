@@ -9,6 +9,7 @@ namespace TheliaGiftCard\Tests;
 
 use Thelia\Core\Event\Order\OrderEvent;
 use Thelia\Core\HttpFoundation\Session\Session;
+use Thelia\Domain\Checkout\Exception\InvalidPaymentException;
 use Thelia\Model\Cart;
 use Thelia\Model\CartQuery;
 use Thelia\Model\Order;
@@ -109,8 +110,9 @@ final class GiftCardPaymentTest extends GiftCardTestCase
         try {
             (new GiftCardPaymentService())->debitCart($order, $cart->getId());
             self::fail('The payment must be refused.');
-        } catch (GiftCardPaymentRefusedException) {
-            // expected
+        } catch (GiftCardPaymentRefusedException $refusal) {
+            // The checkout answers a payment refusal by sending the buyer back to the payment step.
+            self::assertInstanceOf(InvalidPaymentException::class, $refusal);
         }
     }
 
