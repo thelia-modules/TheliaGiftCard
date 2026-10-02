@@ -40,19 +40,22 @@ class OrderPayListener implements EventSubscriberInterface
     }
 
     /**
+     * Debits the cards put on the cart the order comes from, once the order exists and before
+     * the payment module is called: the module reads the total less what was debited
+     * (PaymentListener::handleGiftCard), and a card refused here leaves an unpaid order rather
+     * than an order a payment module already marked paid.
+     *
      * @throws GiftCardPaymentRefusedException when a card of the cart can no longer pay its share
      */
     public function onOrderPayGiftCard(OrderEvent $event): void
     {
-        $request = $this->request->getCurrentRequest();
-        if (null === $request || !$request->hasSession()) {
+        $order = $event->hasPlacedOrder() ? $event->getPlacedOrder() : $event->getOrder();
+
+        if (null === $order->getId() || null === $order->getCartId()) {
             return;
         }
 
-        $this->giftCardPaymentService->debitCart(
-            $event->getPlacedOrder(),
-            (int) $request->getSession()->getSessionCart($this->dispatcher)->getId()
-        );
+        $this->giftCardPaymentService->debitCart($order, (int) $order->getCartId());
     }
 
     /**
@@ -109,10 +112,9 @@ class OrderPayListener implements EventSubscriberInterface
     {
         return [
             TheliaEvents::ORDER_UPDATE_STATUS => ['creatCodeGiftCard', 128],
-            TheliaEvents::ORDER_PAY => [
-                ['onOrderPayGiftCard', 128],
-                ['onOrderPayGiftCardHandleInfo', 100]
-            ]
+            // Before the confirmation e-mails (128) and before the payment module is called.
+            TheliaEvents::ORDER_BEFORE_PAYMENT => ['onOrderPayGiftCard', 192],
+            TheliaEvents::ORDER_PAY => ['onOrderPayGiftCardHandleInfo', 100],
         ];
     }
 }

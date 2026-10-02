@@ -24,6 +24,9 @@ use TheliaGiftCard\Model\Map\GiftCardTableMap;
  * put in the cart: each debit is one conditional UPDATE that only passes on an enabled, unexpired
  * card with enough credit left, so that two orders cannot spend the same credit. One card refused
  * refuses the payment, and nothing is debited from the others.
+ *
+ * Together the cards are never debited more than the order total: the cart may have gone down
+ * since they were put on it (a coupon), and a card is only debited of what the payment deducts.
  */
 final readonly class GiftCardPaymentService
 {
@@ -32,7 +35,7 @@ final readonly class GiftCardPaymentService
      */
     public function debitCart(Order $order, int $cartId): void
     {
-        $cartGiftCards = GiftCardCartQuery::create()->filterByCartId($cartId)->find();
+        $cartGiftCards = GiftCardCartQuery::create()->filterByCartId($cartId)->orderById()->find();
 
         if (0 === \count($cartGiftCards)) {
             return;
@@ -42,9 +45,13 @@ final readonly class GiftCardPaymentService
         $connection->beginTransaction();
 
         try {
+            $left = GiftCardAmount::cents($order->getTotalAmount());
+
             /** @var GiftCardCart $cartGiftCard */
             foreach ($cartGiftCards as $cartGiftCard) {
-                $this->debit($order, $cartGiftCard, $connection);
+                $share = min($left, GiftCardAmount::cents($cartGiftCard->getSpendAmount()));
+                $this->debit($order, (int) $cartGiftCard->getGiftCardId(), GiftCardAmount::decimal(max(0, $share)), $connection);
+                $left -= max(0, $share);
             }
 
             $connection->commit();
@@ -55,16 +62,13 @@ final readonly class GiftCardPaymentService
         }
     }
 
-    private function debit(Order $order, GiftCardCart $cartGiftCard, ConnectionInterface $connection): void
+    private function debit(Order $order, int $giftCardId, string $amount, ConnectionInterface $connection): void
     {
-        $giftCardId = (int) $cartGiftCard->getGiftCardId();
-        $amount = (string) ($cartGiftCard->getSpendAmount() ?? '0');
+        $this->cancelPreviousAttempt($order, $giftCardId, $connection);
 
         if (bccomp($amount, '0', 6) <= 0) {
             return;
         }
-
-        $this->cancelPreviousAttempt($order, $giftCardId, $connection);
 
         $statement = $connection->prepare(
             'UPDATE `gift_card`
