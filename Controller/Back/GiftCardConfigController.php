@@ -146,7 +146,7 @@ class GiftCardConfigController extends BaseAdminController
             return $response;
         }
 
-        $tokenProvider->checkToken((string) $request->query->get('_token'));
+        $tokenProvider->checkToken((string) $request->request->get('_token'));
 
         $codeGC = $request->query->get('code');
 
@@ -216,7 +216,7 @@ class GiftCardConfigController extends BaseAdminController
             return $response;
         }
 
-        $tokenProvider->checkToken((string) $request->query->get('_token'));
+        $tokenProvider->checkToken((string) $request->request->get('_token'));
 
         try {
             $codeGC = $request->query->get('code');
