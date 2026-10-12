@@ -35,6 +35,8 @@
                already knows which product this is. Rendered as hidden, and not required: a hidden
                input is barred from constraint validation anyway. #}
             {{ form_widget(form.product_id, {type: 'hidden', value: productId, required: false}) }}
+            {# A refused post (invalid fields, a product that is not a gift card) comes back here, where the error is shown below. #}
+            {{ form_widget(form.error_url, {value: app.request.uri}) }}
 
             {% if form.vars.errors|length %}
                 <p class="Input-error paragraph-5" role="alert">{{ form.vars.errors|first.message }}</p>
