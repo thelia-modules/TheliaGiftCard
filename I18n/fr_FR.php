@@ -36,6 +36,7 @@ return array(
     'FORM_ADD_EMAIL_TEXT'                       => 'Texte de l\'email',
     'Gift Card amount' => 'Montant Carte Cadeau',
     'Too many attempts. Please try again later.' => 'Trop de tentatives. Merci de réessayer plus tard.',
+    'This product is not a gift card.' => 'Ce produit n\'est pas une carte cadeau.',
     'This code is not valid, not activated or already used.' => 'Ce code est incorrect, non activé ou déjà utilisé.',
     'Sorry, an error occurred.' => 'Désolé, une erreur est survenue.',
     'No gift card carries this code.' => 'Aucune carte cadeau ne porte ce code.',

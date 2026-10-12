@@ -7,6 +7,7 @@ return array(
     'FORM_ADD_SPONSOR_NAME' => 'Sponsorname',
     'Please check your input: %s' => 'Bitte überprüfen Sie Ihre Eingabe: %s',
     'Too many attempts. Please try again later.' => 'Zu viele Versuche. Bitte versuchen Sie es später erneut.',
+    'This product is not a gift card.' => 'Dieses Produkt ist keine Geschenkkarte.',
     'This code is not valid, not activated or already used.' => 'Dieser Code ist ungültig, nicht aktiviert oder bereits verwendet.',
     'Sorry, an error occurred.' => 'Leider ist ein Fehler aufgetreten.',
     'No gift card carries this code.' => 'Keine Geschenkkarte trägt diesen Code.',
