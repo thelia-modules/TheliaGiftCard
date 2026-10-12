@@ -31,7 +31,8 @@ picked in the card list for a download); the templates receive it as `gift_card_
 
 ### 3.2.2
 
-- The buy form (`/gift-card/info/save`) only accepts a product of the gift card category. Any other posted product id, unknown or not numeric, is refused with a message instead of being put on the cart with the card information (or failing with a 500).
+- The buy form (`/gift-card/info/save`) only accepts a product of the gift card category that has a sale element, and puts its default sale element on the cart. Any other posted product id, unknown or not numeric, is refused with a message instead of being put on the cart with the card information (or failing with a 500).
+- A refused post (this case, and also invalid fields such as empty names, a bad e-mail or an expired token) is logged, puts its message on the form and goes back to the form's `error_url`, the cart when the form has none. Before, it always went to the cart without a message. The product page block now posts its own address as `error_url`, so the message is shown above the form.
 
 ### 3.2.1
 

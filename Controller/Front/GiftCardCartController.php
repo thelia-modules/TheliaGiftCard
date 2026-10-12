@@ -7,6 +7,7 @@
 namespace TheliaGiftCard\Controller\Front;
 
 use Exception;
+use Propel\Runtime\ActiveQuery\Criteria;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,6 +19,7 @@ use Thelia\Controller\Front\BaseFrontController;
 use Thelia\Core\Event\Cart\CartEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Log\Tlog;
+use Thelia\Model\ProductCategoryQuery;
 use Thelia\Model\ProductSaleElementsQuery;
 use TheliaGiftCard\Model\GiftCardInfoCart;
 use TheliaGiftCard\TheliaGiftCard;
@@ -63,7 +65,10 @@ class GiftCardCartController extends BaseFrontController
                 // The posted id is the customer's: only a product of the gift card category may be
                 // put on the cart with the card information.
                 $pse = $this->isGiftCardProductId($product_id)
-                    ? ProductSaleElementsQuery::create()->findOneByProductId((int) $product_id)
+                    ? ProductSaleElementsQuery::create()
+                        ->filterByProductId((int) $product_id)
+                        ->orderByIsDefault(Criteria::DESC)
+                        ->findOne()
                     : null;
 
                 if (null === $pse) {
@@ -109,13 +114,15 @@ class GiftCardCartController extends BaseFrontController
             }
 
         } catch (FormValidationException $e) {
+            Tlog::getInstance()->addError($e->getMessage());
+
             $form->setErrorMessage($e->getMessage());
 
             $parserContext
                 ->addForm($form)
                 ->setGeneralError($e->getMessage());
 
-            return $this->generateErrorRedirect($form) ?? $this->generateRedirect($urlGenerator->generate(self::CART_ROUTE));
+            return $this->generateRedirect($form->getErrorUrl($urlGenerator->generate(self::CART_ROUTE)));
         } catch (Exception $e) {
             Tlog::getInstance()->addError($e->getMessage());
 
@@ -127,7 +134,13 @@ class GiftCardCartController extends BaseFrontController
 
     private function isGiftCardProductId(mixed $productId): bool
     {
-        return (\is_int($productId) || (\is_string($productId) && ctype_digit($productId)))
-            && \in_array((int) $productId, TheliaGiftCard::getGiftCardProductList(), true);
+        $categoryId = TheliaGiftCard::getGiftCardCategoryId();
+
+        return $categoryId > 0
+            && (\is_int($productId) || (\is_string($productId) && ctype_digit($productId)))
+            && ProductCategoryQuery::create()
+                ->filterByCategoryId($categoryId)
+                ->filterByProductId((int) $productId)
+                ->exists();
     }
 }
