@@ -173,6 +173,7 @@ class HookConfigurationManager extends BaseHook
                 'orm' => null,
                 'title' => Translator::getInstance()->trans('pdf', [], TheliaGiftCard::DOMAIN_NAME),
                 'searchable' => false,
+                'orderable' => false,
             ],
             [
                 'name' => 'action',
@@ -180,6 +181,15 @@ class HookConfigurationManager extends BaseHook
                 'orm' => null,
                 'title' => Translator::getInstance()->trans('action', [], TheliaGiftCard::DOMAIN_NAME),
                 'searchable' => false,
+                'orderable' => false,
+            ],
+            [
+                'name' => 'edit',
+                'targets' => ++$i,
+                'orm' => null,
+                'title' => Translator::getInstance()->trans('edit', [], TheliaGiftCard::DOMAIN_NAME),
+                'searchable' => false,
+                'orderable' => false,
             ],
         ];
     }

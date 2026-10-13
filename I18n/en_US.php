@@ -18,5 +18,9 @@ return array(
     'action' => 'Action',
     'code' => 'Code',
     'spend_amount' => 'Amount Spent',
-    'expiration_date' => 'Expiration date'
+    'expiration_date' => 'Expiration date',
+    'created_at' => 'Creation date',
+    'edit' => 'Edit',
+    'Montant Carte Cadeau %code : %amount' => 'Gift card %code amount: %amount',
+    'Total payé en carte cadeau' => 'Total paid with gift cards',
 );

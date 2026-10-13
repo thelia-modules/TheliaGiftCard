@@ -121,7 +121,8 @@ class GiftCardAdminController extends BaseAdminController
                 $giftCard->getCreatedAt('d-m-Y'),
                 $giftCard->getStatus(),
                 $giftCard->getId(),
-                $giftCard->getId()
+                $giftCard->getId(),
+                $giftCard->getId(),
             ];
 
             $json['data'][] = $currentData;

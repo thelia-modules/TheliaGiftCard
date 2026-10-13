@@ -4,7 +4,7 @@
         <div class="modal-content">
             <form action="/admin/module/theliagiftcard/config/save" method="post">
                 <div class="modal-header">
-                    <h5 class="modal-title">{{ 'Configuration'|trans({}, 'theliagiftcard.bo.default') }}</h5>
+                    <h5 class="modal-title">{{ 'Configuration'|trans({}, 'theliagiftcard.bo.default-twig') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -17,7 +17,7 @@
                                name="{{ form.vars.full_name }}[gift_card_auto_send]" value="1"
                                {{ thelia_config('gift_card_mode', false) ? 'checked' : '' }}>
                         <label class="form-check-label" for="gift_card_auto_send">
-                            {{ 'Activate auto send gift card by email'|trans({}, 'theliagiftcard.bo.default') }}
+                            {{ 'Activate auto send gift card by email'|trans({}, 'theliagiftcard.bo.default-twig') }}
                         </label>
                     </div>
 
@@ -38,10 +38,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        {{ 'Annuler'|trans({}, 'theliagiftcard.bo.default') }}
+                        {{ 'Annuler'|trans({}, 'theliagiftcard.bo.default-twig') }}
                     </button>
                     <button type="submit" class="btn btn-primary">
-                        {{ 'Sauvegarder'|trans({}, 'theliagiftcard.bo.default') }}
+                        {{ 'Sauvegarder'|trans({}, 'theliagiftcard.bo.default-twig') }}
                     </button>
                 </div>
             </form>
