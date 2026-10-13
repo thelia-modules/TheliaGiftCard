@@ -29,6 +29,14 @@ picked in the card list for a download); the templates receive it as `gift_card_
 
 ## Changes
 
+### 3.2.3
+
+- The gift card list of the configuration page loads again. The script declared a thirteenth column (the edit button) that the table header did not have, and DataTables stopped on `Cannot read properties of undefined (reading 'style')` before asking for the cards. The edit column is now part of the column definitions, so the header, the script and the rows of `/admin/module/theliagiftcard/show` all have thirteen columns.
+- The back-office templates are translated. They used the `theliagiftcard.bo.default` domain, which is only registered for a `templates/backOffice/default` folder the module no longer has, and no back-office catalogue was shipped. They now use `theliagiftcard.bo.default-twig`, with fr_FR, en_US and de_DE catalogues in `I18n/backOffice/default-twig/`. The `created_at` and `edit` column titles are translated too.
+- A shop that overrides these back-office labels in its own catalogues must move them from the `theliagiftcard.bo.default` domain to `theliagiftcard.bo.default-twig`.
+- The German column titles of the list and the order block keys (`Montant Carte Cadeau %code : %amount`, `Total payé en carte cadeau`) are translated in fr_FR, en_US and de_DE. The DataTables summary lines are translated as whole sentences.
+- The PDF, action and edit columns are no longer sortable: they have no database column to sort on.
+
 ### 3.2.2
 
 - The buy form (`/gift-card/info/save`) only accepts a product of the gift card category that has a sale element, and puts its default sale element on the cart. Any other posted product id, unknown or not numeric, is refused with a message instead of being put on the cart with the card information (or failing with a 500).

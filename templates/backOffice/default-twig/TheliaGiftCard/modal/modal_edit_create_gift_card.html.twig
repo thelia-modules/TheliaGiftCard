@@ -4,11 +4,11 @@
         <div class="modal-content">
             <form action="/admin/module/theliagiftcard/edit-gift-card" method="post">
                 <div class="modal-header">
-                    <h5 class="modal-title">{{ 'Edit a gift card'|trans({}, 'theliagiftcard.bo.default') }}</h5>
+                    <h5 class="modal-title">{{ 'Edit a gift card'|trans({}, 'theliagiftcard.bo.default-twig') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <h4>{{ 'Gift Card Informations'|trans({}, 'theliagiftcard.bo.default') }}</h4>
+                    <h4>{{ 'Gift Card Informations'|trans({}, 'theliagiftcard.bo.default-twig') }}</h4>
 
                     {{ form_errors(form) }}
 
@@ -38,10 +38,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        {{ 'Cancel'|trans({}, 'theliagiftcard.bo.default') }}
+                        {{ 'Cancel'|trans({}, 'theliagiftcard.bo.default-twig') }}
                     </button>
                     <button type="submit" class="btn btn-primary">
-                        {{ 'Save'|trans({}, 'theliagiftcard.bo.default') }}
+                        {{ 'Save'|trans({}, 'theliagiftcard.bo.default-twig') }}
                     </button>
                 </div>
             </form>
