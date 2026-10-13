@@ -27,6 +27,10 @@
             </div>
         </div>
 
+        <div id="gift-card-status-error" class="alert alert-danger d-none" role="alert">
+            {{ 'The status of the card could not be changed. Reload the page and try again.'|trans({}, 'theliagiftcard.bo.default-twig') }}
+        </div>
+
         <table id="dataTableGiftCard" width="100%" class="table table-bordered table-hover"
                summary="{{ 'List of Gift Card'|trans({}, 'theliagiftcard.bo.default-twig') }}">
             <thead>

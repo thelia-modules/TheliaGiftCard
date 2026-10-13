@@ -45,4 +45,7 @@ return array(
     'edit' => 'Modifier',
     'Montant Carte Cadeau %code : %amount' => 'Montant carte cadeau %code : %amount',
     'Total payé en carte cadeau' => 'Total payé en carte cadeau',
+    'FORM_EDIT_AMOUNT_GC' => 'Montant',
+    'FORM_EDIT_EXPIRATION_GC' => 'Date d\'expiration',
+    'FORM_EDIT_BENEFICIARY_ADDRESS' => 'E-mail du bénéficiaire',
 );

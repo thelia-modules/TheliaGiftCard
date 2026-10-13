@@ -46,9 +46,7 @@ class GiftCardAdminController extends BaseAdminController
             return new JsonResponse($tab);
         }
 
-        if ($infos = GiftCardInfoCartQuery::create()->filterByGiftCardId($giftCard->getId())->findOne()) {
-            $tab['beneficiary_address'] = $infos->getBeneficiaryAddress();
-        }
+        $tab['beneficiary_address'] = GiftCardInfoCartQuery::create()->filterByGiftCardId($giftCard->getId())->findOne()?->getBeneficiaryAddress();
 
         $tab['amount'] = $giftCard->getAmount();
         $tab['expiration_date'] = $giftCard->getExpirationDate()?->format('Y-m-d');
