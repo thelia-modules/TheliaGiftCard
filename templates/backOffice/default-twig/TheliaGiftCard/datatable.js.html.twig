@@ -27,24 +27,35 @@
             .replace(/'/g, '&#039;');
     }
 
-    $('body').on('click', '.status-button', function (e) {
+    {# Activation and deactivation are POST forms carrying the CSRF token: send the form itself, then
+       redraw the table once the server has answered, on the same page. The controller answers 204 to
+       this request: anything else (the login page of an expired session, a refused token, an error)
+       leaves the card as it was, and says so. #}
+    $('body').on('submit', '.js-gift-card-status-form', function (e) {
         e.preventDefault();
 
-        let elem = e.currentTarget;
-        let url = elem.href;
+        let form = e.currentTarget;
+        let button = form.querySelector('button');
+        let error = document.getElementById('gift-card-status-error');
 
-        elem.setAttribute('disabled', 'disabled');
+        button.setAttribute('disabled', 'disabled');
+        error.classList.add('d-none');
 
         $.ajax({
-            url: url,
-            error: function (e) {
-
+            method: 'POST',
+            url: form.action,
+            data: $(form).serialize()
+        }).done(function (data, textStatus, jqXHR) {
+            if (204 !== jqXHR.status) {
+                return failed();
             }
-        }).always(function () {
-            elem.removeAttribute("disabled");
-        });
+            $('#dataTableGiftCard').DataTable().ajax.reload(null, false);
+        }).fail(failed);
 
-        $('#dataTableGiftCard').DataTable().ajax.reload(null, false);
+        function failed() {
+            error.classList.remove('d-none');
+            button.removeAttribute('disabled');
+        }
     });
 
     $('body').on('click', '.edit-gc-button', function (e) {
@@ -113,16 +124,16 @@
                     let status = row[9];
                     let code = escapeHtml(encodeURIComponent(row[2]));
                     if (status)
-                        return '<form method="post" class="d-inline" action="/admin/module/theliagiftcard/deactivate?code=row_code"><input type="hidden" name="_token" value="{{ assignToken() }}"><button type="submit" class="btn status-button btn-success btn-sm" title="{{ 'Deactivate_GIFT_CARD'|trans({}, 'theliagiftcard.bo.default-twig') }}"><i class="bi bi-power"></i></button></form>'.replace('row_code', code) +
-                        '<a class="btn status-button btn-secondary btn-sm show_send_card_gift_dialog" href="#" data-bs-toggle="modal" data-bs-target="#send_gift_card_email" data-id="' + row[0] + '" data-code="' + code + '" title="{{ 'Envoyer'|trans({}, 'theliagiftcard.bo.default-twig') }}"><i class="bi bi-send"></i></a>'.replace('row_code', code).replace('row_code', code);
-                    return '<form method="post" class="d-inline" action="/admin/module/theliagiftcard/activate?code=row_code"><input type="hidden" name="_token" value="{{ assignToken() }}"><button type="submit" class="btn status-button btn-danger btn-sm" title="{{ 'Activate_GIFT_CARD'|trans({}, 'theliagiftcard.bo.default-twig') }}"><i class="bi bi-power"></i></button></form>'.replace('row_code', code);
+                        return '<form method="post" class="d-inline js-gift-card-status-form" action="/admin/module/theliagiftcard/deactivate?code=row_code"><input type="hidden" name="_token" value="{{ assignToken() }}"><button type="submit" class="btn btn-success btn-sm" title="{{ 'Deactivate_GIFT_CARD'|trans({}, 'theliagiftcard.bo.default-twig') }}"><i class="bi bi-power"></i></button></form>'.replace('row_code', code) +
+                        '<a class="btn btn-secondary btn-sm show_send_card_gift_dialog" href="#" data-bs-toggle="modal" data-bs-target="#send_gift_card_email" data-id="' + row[0] + '" data-code="' + code + '" title="{{ 'Envoyer'|trans({}, 'theliagiftcard.bo.default-twig') }}"><i class="bi bi-send"></i></a>'.replace('row_code', code).replace('row_code', code);
+                    return '<form method="post" class="d-inline js-gift-card-status-form" action="/admin/module/theliagiftcard/activate?code=row_code"><input type="hidden" name="_token" value="{{ assignToken() }}"><button type="submit" class="btn btn-danger btn-sm" title="{{ 'Activate_GIFT_CARD'|trans({}, 'theliagiftcard.bo.default-twig') }}"><i class="bi bi-power"></i></button></form>'.replace('row_code', code);
                 }
             },
             {
                 targets: [12],
                 render: function (data, type, row, meta) {
                     let code = escapeHtml(row[2]);
-                    return '<a class="btn status-button btn-secondary btn-sm show_manualy_edit_card_gift_dialog" data-bs-toggle="modal" data-bs-target="#manualy_edit_card_gift_dialog" data-id="' + row[0] + '" data-code="' + code + '" title="{{ 'EDIT_GIFT_CARD'|trans({}, 'theliagiftcard.bo.default-twig') }}"><i class="bi bi-pencil-square"></i></a>';
+                    return '<a class="btn btn-secondary btn-sm show_manualy_edit_card_gift_dialog" data-bs-toggle="modal" data-bs-target="#manualy_edit_card_gift_dialog" data-id="' + row[0] + '" data-code="' + code + '" title="{{ 'EDIT_GIFT_CARD'|trans({}, 'theliagiftcard.bo.default-twig') }}"><i class="bi bi-pencil-square"></i></a>';
                 }
             }
         ]),
@@ -174,18 +185,44 @@
             table.classList.remove("d-none");
     }
 
-    function refreshFormData(code, specified = null) {
-        $.ajax({
+    {# The card the edit window is open on, and the request that reads it: a late answer for a card
+       opened before must not fill the window of the next one. #}
+    let editedCardCode = null;
+    let editedCardRequest = null;
+
+    function forgetEditedCard() {
+        editedCardCode = null;
+        if (editedCardRequest) {
+            editedCardRequest.abort();
+            editedCardRequest = null;
+        }
+    }
+
+    function refreshFormData(code) {
+        forgetEditedCard();
+        let requestedCode = String(code);
+        editedCardCode = requestedCode;
+
+        let form = document.querySelector('#manualy_edit_card_gift_dialog form');
+        form.reset();
+        $('#amount, #expirationDate, #beneficiaryAddress, #giftCardId').val('');
+        buildTableFromLogs([]);
+
+        editedCardRequest = $.ajax({
             method: "POST",
-            url: '/admin/module/theliagiftcard/show/' + encodeURIComponent(code),
+            url: '/admin/module/theliagiftcard/show/' + encodeURIComponent(requestedCode),
             dataType: "json",
             success: function (response) {
+                if (requestedCode !== editedCardCode) {
+                    return;
+                }
+                editedCardRequest = null;
                 $('#amount').val(response['amount']);
                 $('#expirationDate').val(response['expiration_date']);
                 $('#beneficiaryAddress').val(response['beneficiary_address']);
                 $('#giftCardId').val(response['card_id']);
 
-                buildTableFromLogs(response["HISTORY"]);
+                buildTableFromLogs(response["HISTORY"] || []);
             }
         });
     }
@@ -219,10 +256,6 @@
         tbody.innerHTML = html;
     }
 
-    $('.show_manualy_edit_card_gift_dialog').on('click', function () {
-        $('#giftCardId').val($(this).attr('id'));
-    });
-
     $('#send_gift_card_email').on('shown.bs.modal', function (element) {
         $('#giftCardCode').val($(element.relatedTarget).data('code'));
     });
@@ -232,9 +265,10 @@
     });
 
     $('#manualy_edit_card_gift_dialog').on('show.bs.modal', function (e) {
-        var code = $(e.relatedTarget).data('code');
-        refreshFormData(code);
+        refreshFormData($(e.relatedTarget).attr('data-code'));
     });
+
+    $('#manualy_edit_card_gift_dialog').on('hide.bs.modal', forgetEditedCard);
 </script>
 
 <style>

@@ -42,4 +42,10 @@ return [
     'Displaying elements _START_ to _END_ of _TOTAL_' => 'Affichage des éléments _START_ à _END_ sur _TOTAL_',
     'Displaying elements 0 to 0 of 0' => 'Affichage des éléments 0 à 0 sur 0',
     '(filtered from _MAX_ elements in total)' => '(filtrés sur _MAX_ éléments au total)',
+    'Usage history' => 'Historique d\'utilisation',
+    'Order reference' => 'Référence de commande',
+    'Amount spent' => 'Montant utilisé',
+    'Order status' => 'Statut de la commande',
+    'Date' => 'Date',
+    'The status of the card could not be changed. Reload the page and try again.' => 'Le statut de la carte n\'a pas pu être modifié. Rechargez la page et réessayez.',
 ];

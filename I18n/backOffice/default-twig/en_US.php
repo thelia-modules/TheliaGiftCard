@@ -42,4 +42,10 @@ return [
     'Displaying elements _START_ to _END_ of _TOTAL_' => 'Displaying elements _START_ to _END_ of _TOTAL_',
     'Displaying elements 0 to 0 of 0' => 'Displaying elements 0 to 0 of 0',
     '(filtered from _MAX_ elements in total)' => '(filtered from _MAX_ elements in total)',
+    'Usage history' => 'Usage history',
+    'Order reference' => 'Order reference',
+    'Amount spent' => 'Amount spent',
+    'Order status' => 'Order status',
+    'Date' => 'Date',
+    'The status of the card could not be changed. Reload the page and try again.' => 'The status of the card could not be changed. Reload the page and try again.',
 ];

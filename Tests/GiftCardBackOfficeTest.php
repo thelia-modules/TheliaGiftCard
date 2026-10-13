@@ -21,6 +21,7 @@ use Thelia\Core\Translation\Translator;
 use Thelia\Model\Admin;
 use TheliaGiftCard\Hook\HookConfigurationManager;
 use TheliaGiftCard\Hook\HookManager;
+use TheliaGiftCard\Model\GiftCardInfoCartQuery;
 use TheliaGiftCard\Model\GiftCardOrder;
 use TheliaGiftCard\Model\GiftCardQuery;
 use TheliaGiftCard\Service\GiftCardListInfoProvider;
@@ -30,6 +31,8 @@ use TheliaGiftCard\Service\GiftCardListInfoProvider;
  */
 final class GiftCardBackOfficeTest extends GiftCardTestCase
 {
+    private const TOKEN = 'gift-card-back-office-token';
+
     /**
      * @return iterable<string, array{string, string}>
      */
@@ -127,6 +130,8 @@ final class GiftCardBackOfficeTest extends GiftCardTestCase
         self::assertStringContainsString('Montant de carte cadeau utilisé pour cette commande', $orderBlock);
         self::assertStringContainsString('Montant carte cadeau '.$giftCard->getCode().' : 12.50', $orderBlock);
         self::assertStringContainsString('Total payé en carte cadeau', $orderBlock);
+        self::assertStringContainsString('E-mail du bénéficiaire', $page);
+        self::assertStringContainsString('<th>Statut de la commande</th>', $page);
 
         [$page, $script, $orderBlock] = $this->renderConfigurationScreen('de_DE', $order->getId());
 
@@ -137,6 +142,94 @@ final class GiftCardBackOfficeTest extends GiftCardTestCase
         self::assertStringContainsString('"sInfo": "Elemente _START_ bis _END_ von insgesamt _TOTAL_"', $script);
         self::assertStringContainsString('Betrag der Geschenkkarte '.$giftCard->getCode().': 12.50', $orderBlock);
         self::assertStringContainsString('Mit Geschenkkarten bezahlt insgesamt', $orderBlock);
+        self::assertStringContainsString('E-Mail des Empfängers', $page);
+        self::assertStringContainsString('<th>Bestellstatus</th>', $page);
+    }
+
+    public function testTheEditWindowHasTheFieldsTheScriptFillsWithTheCard(): void
+    {
+        $giftCard = $this->giftCard();
+        [$page, $script] = $this->renderConfigurationScreen('fr_FR');
+
+        $response = $this->asAdmin($this->createFixtureFactory()->admin(), 'POST', '/admin/module/theliagiftcard/show/'.$giftCard->getCode());
+        $card = json_decode((string) $response->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+
+        preg_match_all("/\\$\\('#(\\w+)'\\)\\.val\\(response\\['(\\w+)'\\]\\)/", $script, $filled, \PREG_SET_ORDER);
+        $fieldOf = [];
+        foreach ($filled as [, $elementId, $key]) {
+            $fieldOf[$elementId] = $key;
+        }
+        self::assertSame(
+            ['amount' => 'amount', 'expirationDate' => 'expiration_date', 'beneficiaryAddress' => 'beneficiary_address', 'giftCardId' => 'card_id'],
+            $fieldOf,
+        );
+
+        $document = new \DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        $document->loadHTML('<?xml encoding="UTF-8">'.$page);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        $xpath = new \DOMXPath($document);
+        $form = $xpath->query('//*[@id="manualy_edit_card_gift_dialog"]//form')->item(0);
+        self::assertInstanceOf(\DOMElement::class, $form);
+
+        $expectedNames = ['amount' => 'amount', 'expirationDate' => 'expiration_date', 'beneficiaryAddress' => 'beneficiary_address', 'giftCardId' => 'gift_card_id'];
+        foreach ($expectedNames as $elementId => $field) {
+            $fields = $xpath->query('.//*[@id="'.$elementId.'"]', $form);
+            self::assertSame(1, $fields->length, 'The script fills #'.$elementId.', which the edit window does not have.');
+            $element = $fields->item(0);
+            self::assertInstanceOf(\DOMElement::class, $element);
+            self::assertSame('edit_gift_card['.$field.']', $element->getAttribute('name'));
+            self::assertArrayHasKey($fieldOf[$elementId], $card, 'The card detail route does not give '.$fieldOf[$elementId].'.');
+        }
+
+        self::assertSame((float) $giftCard->getAmount(), (float) $card['amount']);
+        self::assertSame($giftCard->getId(), $card['card_id']);
+        self::assertSame('hidden', $xpath->query('.//*[@id="giftCardId"]', $form)->item(0)?->getAttribute('type'));
+        self::assertFalse($xpath->query('.//*[@id="beneficiaryAddress"]', $form)->item(0)?->hasAttribute('required'), 'A card without a recipient e-mail could not be saved.');
+        self::assertSame(1, $xpath->query('.//*[@id="logs-body"]', $form)->length, 'The script fills the usage history of the card into #logs-body.');
+    }
+
+    public function testTheListScriptIsToldTheStatusChangedWithoutReloadingThePage(): void
+    {
+        $giftCard = $this->giftCard(['status' => 0]);
+        $uri = '/admin/module/theliagiftcard/%s?code='.$giftCard->getCode();
+
+        $response = $this->postAsAdmin(\sprintf($uri, 'activate'), ['_token' => self::TOKEN], true);
+        self::assertSame(204, $response->getStatusCode());
+        self::assertSame(1, GiftCardQuery::create()->findPk($giftCard->getId())?->getStatus());
+
+        $response = $this->postAsAdmin(\sprintf($uri, 'deactivate'), ['_token' => self::TOKEN], true);
+        self::assertSame(204, $response->getStatusCode());
+        self::assertSame(0, GiftCardQuery::create()->findPk($giftCard->getId())?->getStatus());
+
+        // Sent without the script, the form still goes back to the list.
+        $response = $this->postAsAdmin(\sprintf($uri, 'activate'), ['_token' => self::TOKEN], false);
+        self::assertTrue($response->isRedirect());
+        self::assertSame(1, GiftCardQuery::create()->findPk($giftCard->getId())?->getStatus());
+    }
+
+    public function testTheEditFormRefusesAMissingCardWithoutAnError(): void
+    {
+        foreach (['', '999999999'] as $giftCardId) {
+            $response = $this->postEditForm(['gift_card_id' => $giftCardId, 'amount' => '10', 'expiration_date' => '2030-01-01']);
+
+            self::assertTrue($response->isRedirect(), 'gift_card_id "'.$giftCardId.'" answered '.$response->getStatusCode().'.');
+        }
+    }
+
+    public function testTheRecipientEmailOfACardCanBeChangedAndRemoved(): void
+    {
+        $giftCard = $this->giftCard();
+        $edit = ['gift_card_id' => (string) $giftCard->getId(), 'amount' => '70', 'expiration_date' => '2030-01-01'];
+        $recipient = static fn (): ?string => GiftCardInfoCartQuery::create()->findOneByGiftCardId($giftCard->getId())?->getBeneficiaryAddress();
+
+        $this->postEditForm($edit + ['beneficiary_address' => 'recipient@example.com']);
+        self::assertSame('recipient@example.com', $recipient());
+        self::assertSame(70.0, (float) GiftCardQuery::create()->findPk($giftCard->getId())?->getAmount());
+
+        $this->postEditForm($edit + ['beneficiary_address' => '']);
+        self::assertNull($recipient());
     }
 
     /**
@@ -237,6 +330,42 @@ final class GiftCardBackOfficeTest extends GiftCardTestCase
         } finally {
             $connection->useDebug(false);
         }
+    }
+
+    /**
+     * @param array<string, string> $parameters
+     */
+    private function postAsAdmin(string $uri, array $parameters, bool $fromScript): Response
+    {
+        $session = new Session(new MockArraySessionStorage());
+        $session->setAdminUser($this->createFixtureFactory()->admin());
+        $session->set('thelia.current.admin_lang', $this->lang('fr_FR'));
+        $session->set((string) static::getContainer()->getParameter('thelia.token_id'), self::TOKEN);
+
+        // The header jQuery adds to its requests.
+        $request = Request::create($uri, 'POST', $parameters, server: $fromScript ? ['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'] : []);
+        $request->setSession($session);
+
+        return $this->handleAsMainRequest($request);
+    }
+
+    /**
+     * @param array<string, string> $fields
+     */
+    private function postEditForm(array $fields): Response
+    {
+        $session = new Session(new MockArraySessionStorage());
+        $session->setAdminUser($this->createFixtureFactory()->admin());
+        $session->set('thelia.current.admin_lang', $this->lang('fr_FR'));
+
+        $request = Request::create('/admin/module/theliagiftcard/edit-gift-card', 'POST');
+        $request->setSession($session);
+        $request->request->set('edit_gift_card', $fields + [
+            'success_url' => '/admin/module/TheliaGiftCard',
+            '_token' => $this->csrfToken($request, 'edit_gift_card'),
+        ]);
+
+        return $this->handleAsMainRequest($request);
     }
 
     private function asAdmin(Admin $admin, string $method, string $uri): Response

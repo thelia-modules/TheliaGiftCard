@@ -68,7 +68,9 @@ class ManualyEditGiftCard extends BaseForm
                     'label' => $this->translator->trans('FORM_EDIT_BENEFICIARY_ADDRESS', [], TheliaGiftCard::DOMAIN_NAME),
                     'label_attr' => [
                         'for' => $this->getName() . '-label'
-                    ]
+                    ],
+                    // A card created without a recipient e-mail keeps none: the controller only saves a given address.
+                    'required' => false,
                 ]);
     }
 }

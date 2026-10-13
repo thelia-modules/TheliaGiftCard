@@ -29,6 +29,22 @@ picked in the card list for a download); the templates receive it as `gift_card_
 
 ## Changes
 
+### 3.2.4
+
+- The activate and deactivate buttons of the gift card list work again. They are POST forms since 3.0.0, with the CSRF token in the request body since 3.2.1, but the list script still cancelled the submit and requested the `href` of the button, which a button does not have: the request went to the page itself and the card kept its status. The script now posts the form (action and token) and redraws the table once the change is made. The two routes answer `204 No Content` to this script request (`X-Requested-With: XMLHttpRequest`) and still redirect to the list when the form is sent without the script. Any other answer (expired session, refused token, server error) shows a message above the table and enables the button again.
+- The edit window opens with the amount, expiration date and recipient e-mail of the card. The template passed the element ids in `attr`, after the id Symfony renders, so the browser kept the generated ids and the script filled nothing. The ids are now passed as the `id` variable. Opening a card cancels the request of the card opened before, and a late answer for another card is ignored, so the window never shows (and saves) the values of a previous card.
+- In the edit window, the card id field is hidden again, the recipient e-mail is optional and can be removed by emptying the field, and the usage history table of 2.x, which the script still fills, is back. `/admin/module/theliagiftcard/show/{code}` always returns `beneficiary_address`, `null` when the card has none.
+- The edit action no longer fails with a 500 on an invalid form (empty card id), an unknown card or a missing expiration date: it goes back to the list without changing anything.
+- The edit window labels and the new message are translated in fr_FR, en_US and de_DE.
+
+#### Template overrides
+
+A shop that overrides `datatable.js.html.twig`, `gift-card-config.html.twig` or `modal/modal_edit_create_gift_card.html.twig` must follow these changes:
+
+- the edit window fields have the ids `amount`, `expirationDate`, `beneficiaryAddress` and `giftCardId` (they were rendered as `edit_gift_card_amount`, `edit_gift_card_expiration_date`, `edit_gift_card_beneficiary_address`), and the window contains the history table (`#logs-body`);
+- the status forms of the list carry the `js-gift-card-status-form` class; the `status-button` class is removed from every button and link of the list;
+- the configuration page contains the `#gift-card-status-error` message block.
+
 ### 3.2.3
 
 - The gift card list of the configuration page loads again. The script declared a thirteenth column (the edit button) that the table header did not have, and DataTables stopped on `Cannot read properties of undefined (reading 'style')` before asking for the cards. The edit column is now part of the column definitions, so the header, the script and the rows of `/admin/module/theliagiftcard/show` all have thirteen columns.

@@ -158,7 +158,7 @@ class GiftCardConfigController extends BaseAdminController
         $giftCard?->setStatus(1)
             ->save();
 
-        return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/module/TheliaGiftCard'));
+        return $this->statusChangedResponse($request);
     }
 
     /**
@@ -173,9 +173,9 @@ class GiftCardConfigController extends BaseAdminController
 
         $form = $this->createForm('edit_gift_card');
 
-        $giftCardForm = $this->validateForm($form);
-
         try {
+            $giftCardForm = $this->validateForm($form);
+
             $giftCardId = $giftCardForm->get('gift_card_id')->getData();
 
             $expirationDate = $giftCardForm->get('expiration_date')->getData();
@@ -186,17 +186,26 @@ class GiftCardConfigController extends BaseAdminController
                 ->filterById($giftCardId)
                 ->findOne();
 
+            if (null === $currentGiftCard || !$expirationDate instanceof \DateTimeInterface) {
+                throw new FormValidationException('Unknown gift card or missing expiration date');
+            }
+
             $currentGiftCard
                 ->setAmount($amount)
                 ->setExpirationDate($expirationDate->format('Y-m-d'))
                 ->save();
 
-            if ($address) {
-                $currentGiftCardInfos = GiftCardInfoCartQuery::create()
-                    ->filterByGiftCardId($giftCardId)
-                    ->findOneOrCreate();
+            $currentGiftCardInfos = GiftCardInfoCartQuery::create()
+                ->filterByGiftCardId($currentGiftCard->getId())
+                ->findOne();
 
-                $currentGiftCardInfos->setBeneficiaryAddress($address)->save();
+            if ($address) {
+                ($currentGiftCardInfos ?? (new GiftCardInfoCart())->setGiftCardId($currentGiftCard->getId()))
+                    ->setBeneficiaryAddress($address)
+                    ->save();
+            } elseif (null !== $currentGiftCardInfos) {
+                // An emptied field removes the recipient e-mail of the card.
+                $currentGiftCardInfos->setBeneficiaryAddress(null)->save();
             }
         } catch (FormValidationException $error_message) {
             $error_message = $error_message->getMessage();
@@ -229,6 +238,19 @@ class GiftCardConfigController extends BaseAdminController
             $giftCard?->setStatus(0)->save();
         } catch (PropelException $exception) {
             Tlog::getInstance()->addAlert($exception->getMessage());
+        }
+
+        return $this->statusChangedResponse($request);
+    }
+
+    /**
+     * The list script posts the status forms and only needs to know the change is made; a form sent
+     * without the script goes back to the list.
+     */
+    private function statusChangedResponse(Request $request): Response
+    {
+        if ($request->isXmlHttpRequest()) {
+            return new Response('', Response::HTTP_NO_CONTENT);
         }
 
         return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/module/TheliaGiftCard'));

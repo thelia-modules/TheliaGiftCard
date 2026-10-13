@@ -27,4 +27,7 @@ return array(
     'action' => 'Aktion',
     'Montant Carte Cadeau %code : %amount' => 'Betrag der Geschenkkarte %code: %amount',
     'Total payé en carte cadeau' => 'Mit Geschenkkarten bezahlt insgesamt',
+    'FORM_EDIT_AMOUNT_GC' => 'Betrag',
+    'FORM_EDIT_EXPIRATION_GC' => 'Ablaufdatum',
+    'FORM_EDIT_BENEFICIARY_ADDRESS' => 'E-Mail des Empfängers',
 );
