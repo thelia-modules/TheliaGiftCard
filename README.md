@@ -29,6 +29,11 @@ picked in the card list for a download); the templates receive it as `gift_card_
 
 ## Changes
 
+### 3.2.5
+
+- Placing an order paid in full by gift cards no longer ends on a 500 (`Call to a member function getProductSaleElementsId() on null` in `OrderPayListener`). Since Thelia 3 keeps the cart until its order is paid, the session hands back a new cart, not saved yet, as soon as the order is paid, which the gift card payment does while the order is placed. The `ORDER_PAY` listener read the id of that cart, null, and the query on a null cart id returned the details of every card created from the back office, which belong to no cart. The listener now reads the cart the order was placed from (`order.cart_id`), and only the details attached to a cart line.
+- The recipient details typed for a gift card bought in such an order are linked to its order line, so the card generated afterwards gets them.
+
 ### 3.2.4
 
 - The activate and deactivate buttons of the gift card list work again. They are POST forms since 3.0.0, with the CSRF token in the request body since 3.2.1, but the list script still cancelled the submit and requested the `href` of the button, which a button does not have: the request went to the page itself and the card kept its status. The script now posts the form (action and token) and redraws the table once the change is made. The two routes answer `204 No Content` to this script request (`X-Requested-With: XMLHttpRequest`) and still redirect to the list when the form is sent without the script. Any other answer (expired session, refused token, server error) shows a message above the table and enables the button again.

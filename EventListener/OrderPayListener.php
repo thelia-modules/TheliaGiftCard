@@ -6,6 +6,7 @@
 
 namespace TheliaGiftCard\EventListener;
 
+use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Exception\PropelException;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -59,50 +60,53 @@ class OrderPayListener implements EventSubscriberInterface
     }
 
     /**
+     * Links the recipient details typed for each gift card of the cart to the order line of
+     * that card; the card generated when the order is paid is then linked to them.
+     *
+     * The cart is the one the order names, never the session cart: once an order is paid the
+     * session hands back a new cart not saved yet, whose id is null, and filtering on a null
+     * cart id reads the rows that belong to no cart (the details of the cards created from
+     * the back office).
+     *
      * @throws PropelException
      */
     public function onOrderPayGiftCardHandleInfo(OrderEvent $event): void
     {
-        //Quand un carte cadeau est achetée, on attribue les id order sur la table info,
-        // quand la carte sera activé, on attribue id carte cadeau
-
-        $order = $event->getPlacedOrder();
-
-        $request = $this->request->getCurrentRequest();
-        if (null === $request || !$request->hasSession()) {
+        if (!$event->hasPlacedOrder()) {
             return;
         }
-        $cartId = $request->getSession()->getSessionCart($this->dispatcher)->getId();
+
+        $order = $event->getPlacedOrder();
+        $cartId = $order->getCartId();
+
+        if (null === $order->getId() || null === $cartId) {
+            return;
+        }
 
         $cartNewGiftCards = GiftCardInfoCartQuery::create()
             ->filterByCartId($cartId)
+            ->filterByCartItemId(null, Criteria::ISNOTNULL)
             ->find();
 
         $exclude = [];
 
         /** @var GiftCardInfoCart $cartGiftCard */
         foreach ($cartNewGiftCards as $cartGiftCard) {
-            if ($cartGiftCard) {
-                $cartProduct = CartItemQuery::create()->findPk($cartGiftCard->getCartItemId());
+            $cartProduct = CartItemQuery::create()->findPk($cartGiftCard->getCartItemId());
 
-                foreach ($order->getOrderProducts() as $orderProduct) {
-                    $orderProductCurrent = $orderProduct->getProductSaleElementsId();
+            if (null === $cartProduct) {
+                continue;
+            }
 
-                    if ($cartProduct->getProductSaleElementsId() == $orderProductCurrent &&
-                        !in_array($orderProduct->getId(), $exclude) && !in_array($cartGiftCard->getId(), $exclude)) {
+            foreach ($order->getOrderProducts() as $orderProduct) {
+                if ($cartProduct->getProductSaleElementsId() == $orderProduct->getProductSaleElementsId() &&
+                    !in_array($orderProduct->getId(), $exclude) && !in_array($cartGiftCard->getId(), $exclude)) {
+                    $cartGiftCard
+                        ->setOrderProductId($orderProduct->getId())
+                        ->save();
 
-                        $cartNewCustom = GiftCardInfoCartQuery::create()
-                            ->filterByCartId($cartId)
-                            ->filterByCartItemId($cartGiftCard->getCartItemId())
-                            ->findOne();
-
-                        $cartNewCustom
-                            ->setOrderProductId($orderProduct->getId())
-                            ->save();
-
-                        $exclude[] = $orderProduct->getId();
-                        $exclude[] = $cartGiftCard->getId();
-                    }
+                    $exclude[] = $orderProduct->getId();
+                    $exclude[] = $cartGiftCard->getId();
                 }
             }
         }
