@@ -2,7 +2,6 @@
 
 namespace TheliaGiftCard\Service;
 
-use Front\Front;
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\ActiveQuery\Join;
 use Propel\Runtime\Exception\PropelException;
@@ -162,7 +161,7 @@ class GiftCardService
         );
 
         if (!$deliveryPostageEvent->isValidModule()) {
-            throw new DeliveryException(Translator::getInstance()->trans('The delivery module is not valid.', [], Front::MESSAGE_DOMAIN));
+            throw new DeliveryException(Translator::getInstance()->trans('The delivery module is not valid.', [], TheliaGiftCard::DOMAIN_NAME));
         }
 
         $postage = $deliveryPostageEvent->getPostage()->getAmount();
