@@ -7,9 +7,11 @@ namespace TheliaGiftCard;
 
 use Propel\Runtime\ActiveQuery\Criteria;
 use Propel\Runtime\Connection\ConnectionInterface;
+use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\CacheStorage;
 use Thelia\Core\Event\Feature\FeatureCreateEvent;
@@ -111,9 +113,32 @@ class TheliaGiftCard extends AbstractPaymentModule
             }
         }
 
-        if (version_compare($currentVersion, '3.1.0', '<')) {
-            (new GiftCardCodeUniqueIndex())->addOutsideTransaction();
+        $this->addTheCodeIndexOutsideTheCoreTransaction($con);
+    }
+
+    /**
+     * The core calls update() inside its transaction, after writing to `module`: on MySQL 8 that
+     * transaction holds a lock on gift_card through the foreign keys until it commits, so the
+     * index waits for the end of the command or of the request.
+     */
+    private function addTheCodeIndexOutsideTheCoreTransaction(?ConnectionInterface $con): void
+    {
+        $index = new GiftCardCodeUniqueIndex();
+
+        if (null === $con || !$con->inTransaction()) {
+            $index->addOutsideTransaction();
+
+            return;
         }
+
+        $dispatcher = $this->getDispatcher();
+        $addIndex = static function () use (&$addIndex, $dispatcher, $index): void {
+            $dispatcher->removeListener(ConsoleEvents::TERMINATE, $addIndex);
+            $dispatcher->removeListener(KernelEvents::TERMINATE, $addIndex);
+            $index->addOutsideTransaction();
+        };
+        $dispatcher->addListener(ConsoleEvents::TERMINATE, $addIndex);
+        $dispatcher->addListener(KernelEvents::TERMINATE, $addIndex);
     }
 
     public function getHooks(): array

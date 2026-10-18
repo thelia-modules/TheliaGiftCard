@@ -22,17 +22,26 @@ use TheliaGiftCard\Model\Map\GiftCardTableMap;
  * are reported and left untouched, both cards stay usable, and the index is added by the next
  * update once they are dealt with.
  *
- * The core runs a module update inside a transaction, and MySQL commits it implicitly on any
- * ALTER TABLE: Propel would then never get back to nesting level 0, and everything the process
- * writes afterwards would run without a transaction. The update therefore works on a
- * connection of its own ({@see self::addOutsideTransaction()}).
+ * MySQL commits the current transaction implicitly on any ALTER TABLE: run on the connection of
+ * a caller in a transaction, Propel would never get back to nesting level 0, and everything the
+ * process writes afterwards would run without a transaction. The index is therefore added on a
+ * connection of its own ({@see self::addOutsideTransaction()}), which waits for a table lock
+ * $lockWaitSeconds at most instead of the default year of MySQL.
  */
 final readonly class GiftCardCodeUniqueIndex
 {
     public const INDEX_NAME = 'gift_card_code_unique';
 
+    public function __construct(private int $lockWaitSeconds = 10)
+    {
+    }
+
     /**
      * Opens a dedicated connection, so that the caller's transaction stays open and usable.
+     *
+     * Never called while the caller's transaction holds a lock on gift_card: on MySQL 8, a
+     * transaction that wrote to `module` holds one through the foreign keys, and the ALTER TABLE
+     * would wait for it from the same process.
      */
     public function addOutsideTransaction(): bool
     {
@@ -49,7 +58,18 @@ final readonly class GiftCardCodeUniqueIndex
             Propel::getServiceContainer()->getAdapter(GiftCardTableMap::DATABASE_NAME),
         );
 
-        return $this->add($connection);
+        $connection->exec(\sprintf('SET SESSION lock_wait_timeout = %d', $this->lockWaitSeconds));
+
+        try {
+            return $this->add($connection);
+        } catch (\PDOException $exception) {
+            Tlog::getInstance()->warning(\sprintf(
+                'TheliaGiftCard: unique index on gift_card.code not created, the table stayed locked: %s',
+                $exception->getMessage(),
+            ));
+
+            return false;
+        }
     }
 
     public function add(ConnectionInterface $connection): bool

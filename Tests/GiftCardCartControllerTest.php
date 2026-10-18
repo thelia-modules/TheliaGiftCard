@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace TheliaGiftCard\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
@@ -104,9 +105,7 @@ final class GiftCardCartControllerTest extends GiftCardTestCase
         $this->assertRefusedBackTo($response, '/checkout/cart', self::NOT_A_GIFT_CARD);
     }
 
-    /**
-     * @dataProvider unknownProducts
-     */
+    #[DataProvider('unknownProducts')]
     public function testAnUnknownProductIsRefusedWithoutAnError(string $postedProductId): void
     {
         $this->giftCardProduct(50.0);
