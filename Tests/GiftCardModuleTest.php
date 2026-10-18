@@ -7,8 +7,11 @@ declare(strict_types=1);
 
 namespace TheliaGiftCard\Tests;
 
+use Propel\Runtime\ActiveQuery\Criteria;
 use Thelia\Core\Form\TheliaFormFactory;
+use Thelia\Core\Translation\Translator;
 use Thelia\Model\FeatureQuery;
+use Thelia\Model\ModuleConfigQuery;
 use Thelia\Model\TemplateQuery;
 use TheliaGiftCard\Form\BuyCustomGiftCardForm;
 use TheliaGiftCard\Form\Config\ManualyCreateGiftCard;
@@ -16,6 +19,40 @@ use TheliaGiftCard\TheliaGiftCard;
 
 final class GiftCardModuleTest extends GiftCardTestCase
 {
+    /**
+     * bin/test-prepare activates every module present: the shop already holds the template, the
+     * feature and their stored ids. The activation is played from a shop that never had them,
+     * inside the transaction of the test.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $moduleId = TheliaGiftCard::getModuleId();
+        foreach ([
+            TheliaGiftCard::GIFT_CARD_TEMPLATE_CONFIG_NAME,
+            TheliaGiftCard::GIFT_CARD_FEATURE_CONFIG_NAME,
+            TheliaGiftCard::GIFT_CARD_TEMPLATE_NAME,
+            TheliaGiftCard::GIFT_CARD_FEATURE_NAME,
+        ] as $configName) {
+            ModuleConfigQuery::create()->deleteConfigValue($moduleId, $configName);
+        }
+
+        $translator = Translator::getInstance();
+        TemplateQuery::create()
+            ->useTemplateI18nQuery()
+                ->filterByName([TheliaGiftCard::GIFT_CARD_TEMPLATE_NAME, $translator->trans(TheliaGiftCard::GIFT_CARD_TEMPLATE_NAME)], Criteria::IN)
+            ->endUse()
+            ->find()
+            ->delete();
+        FeatureQuery::create()
+            ->useFeatureI18nQuery()
+                ->filterByTitle([TheliaGiftCard::GIFT_CARD_FEATURE_NAME, $translator->trans(TheliaGiftCard::GIFT_CARD_FEATURE_NAME, [], TheliaGiftCard::DOMAIN_NAME)], Criteria::IN)
+            ->endUse()
+            ->find()
+            ->delete();
+    }
+
     public function testActivatingTheModuleAgainDoesNotCreateAnotherTemplateOrFeature(): void
     {
         $templatesBefore = TemplateQuery::create()->count();
