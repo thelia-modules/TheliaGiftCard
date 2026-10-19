@@ -2,8 +2,8 @@
    that puts them on the cart. Rendered by TheliaGiftCard\Hook\Theme\GiftCardThemeHook on the
    `checkout.summary.bottom` theme hook point, under the total of the checkout summary.
 
-   "Left to pay" is the amount the payment module asks for: PaymentListener takes what the cards
-   pay off the total on ORDER_PAY_GET_TOTAL. The summary sits in a live component that redraws
+   "Left to pay" is the balance the core leaves to the payment provider when it composes the
+   parts of the order (OrderPaymentComposer). The summary sits in a live component that redraws
    itself: the form is a plain POST to /gift-card/spend, no script.
 
    Translated with |theliagiftcard_trans (see account-gift-card.html.twig). Lines reuse the

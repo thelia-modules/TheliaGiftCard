@@ -1,0 +1,78 @@
+{# The live component behind the gift-card line of the payment step
+   (TheliaGiftCard\Twig\GiftCardPaymentPart).
+
+   Built from the theme's own components (Fields:Checkbox, Fields:Input, Molecules:Button,
+   Molecules:SnackBar) so that it needs no style of its own. Translated with
+   |theliagiftcard_trans, never the native |trans (see FrontTranslationExtension): the keys live
+   in I18n/frontOffice/flexy, and rewording one means updating fr_FR and en_US together (de_DE
+   only holds one key, the other languages read the English source).
+
+   Amounts and dates are formatted with this.langCode: `lang_code` is a variable of the page's
+   render, a live component answering its own request does not have it. #}
+<div {{ attributes.defaults({class: 'flex flex-col gap-3 mt-3'}) }}>
+    {% if not this.available %}
+        <p class="paragraph-4 text-grey-dark">{{ 'Sign in to pay with a gift card.'|theliagiftcard_trans }}</p>
+    {% else %}
+        {% set cards = this.cards %}
+
+        {% if this.error == 'refused' %}
+            <twig:Molecules:SnackBar:Base
+                variant="warning"
+                withIcon
+                role="alert"
+                text="{{ 'This gift card cannot be used on this order.'|theliagiftcard_trans|escape('html') }}"
+            />
+        {% endif %}
+
+        {% if cards is not empty %}
+            <fieldset class="flex flex-col gap-2">
+                <legend class="paragraph-4 text-grey-dark mb-2">{{ 'Your gift cards'|theliagiftcard_trans }}</legend>
+                {% for card in cards %}
+                    {% set onCart = card.amountOnCart != '0.00' %}
+                    {% set label %}
+                        {{- 'Gift card'|theliagiftcard_trans }} : {{ card.remainingAmount|format_currency(this.currencyCode, locale: this.langCode) -}}
+                        {%- if card.expirationDate %} ({{ 'valid until %date%'|theliagiftcard_trans({'%date%': card.expirationDate|format_date('short', locale: this.langCode)}) }}){% endif -%}
+                        {%- if onCart %}, {{ '%amount% used on this order'|theliagiftcard_trans({'%amount%': card.amountOnCart|format_currency(this.currencyCode, locale: this.langCode)}) }}{% endif -%}
+                    {% endset %}
+                    {{ component('Fields:Checkbox:Base', {
+                        label: label|trim,
+                        'input:id': 'gift-card-' ~ card.id,
+                        'input:checked': onCart,
+                        'input:data-action': 'change->live#action',
+                        'input:data-live-action-param': 'toggle',
+                        'input:data-live-gift-card-id-param': card.id,
+                    }) }}
+                {% endfor %}
+            </fieldset>
+        {% endif %}
+
+        {# The code of a card the buyer has not activated yet: typing it activates it on the
+           account, as the account page does, and puts it on the order. #}
+        <form class="flex flex-wrap items-end gap-2" data-action="live#action:prevent" data-live-action-param="applyCode">
+            {{ component('Fields:Input:Base', {
+                label: 'Gift card code'|theliagiftcard_trans,
+                name: 'gift-card-code',
+                id: 'gift-card-code',
+                value: this.code,
+                autocomplete: 'off',
+                error: this.error == 'code' ? 'This code cannot be used on this order.'|theliagiftcard_trans : (this.error == 'attempts' ? 'Too many codes were tried: try again later.'|theliagiftcard_trans : false),
+                'input:data-model': 'norender|code',
+                'input:autocapitalize': 'characters',
+                'input:spellcheck': 'false',
+            }) }}
+            <twig:Molecules:Button:Base color="secondary" type="submit" text="{{ 'Add'|theliagiftcard_trans|escape('html') }}" />
+        </form>
+
+        {% if this.hasCardsOnCart %}
+            <twig:Molecules:Button:Base
+                color="minimal"
+                size="small"
+                data-action="live#action"
+                data-live-action-param="remove"
+                text="{{ 'Remove my gift cards from this order'|theliagiftcard_trans|escape('html') }}"
+            />
+        {% endif %}
+
+        <p class="paragraph-4 text-grey-dark">{{ 'A gift card cannot be combined with a discount code: using one takes the discount codes off your cart.'|theliagiftcard_trans }}</p>
+    {% endif %}
+</div>

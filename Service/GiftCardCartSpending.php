@@ -40,6 +40,11 @@ use TheliaGiftCard\TheliaGiftCard;
  */
 final readonly class GiftCardCartSpending
 {
+    /**
+     * Far more than any cart: "all the cart can take" for spend().
+     */
+    private const int NO_LIMIT_IN_CENTS = 1_000_000_000_00;
+
     public function __construct(
         private EventDispatcherInterface $dispatcher,
     ) {
@@ -148,6 +153,39 @@ final readonly class GiftCardCartSpending
     }
 
     /**
+     * Puts the selected cards on the cart for as much of the cart as they can pay: what the
+     * payment step does, where the buyer ticks cards and never types an amount.
+     *
+     * @param list<int> $giftCardIds
+     *
+     * @return int the amount now put on the cart, in cents
+     *
+     * @throws GiftCardSpendRefusedException
+     */
+    public function spendAsMuchAsTheCartCosts(Customer $customer, Cart $cart, array $giftCardIds): int
+    {
+        // Not the total read now: spend() takes the coupons off first, which raises the total.
+        return $this->spend($customer, $cart, $giftCardIds, GiftCardAmount::decimal(self::NO_LIMIT_IN_CENTS));
+    }
+
+    /**
+     * The id of a card of the customer, spendable on a cart, that carries this code. Null for any
+     * other code, whatever the reason: a card of someone else, expired, disabled, spent out.
+     */
+    public function spendableCardIdOfCustomerByCode(Customer $customer, string $code): ?int
+    {
+        $code = trim($code);
+
+        if ('' === $code) {
+            return null;
+        }
+
+        $giftCard = $this->spendableQuery($customer)->filterByCode($code)->findOne();
+
+        return $giftCard instanceof GiftCard ? (int) $giftCard->getId() : null;
+    }
+
+    /**
      * Puts one card on the cart, for the amount asked for at most, without taking the others
      * off. Kept for GiftCardSpend, the entry point of the previous releases.
      *
@@ -177,9 +215,10 @@ final readonly class GiftCardCartSpending
     }
 
     /**
-     * What the order placed from the cart will cost, in cents: taxes, discount, postage and gift
-     * wrapping included — the total the checkout summary shows, which the order total the
-     * payment module is asked for (ORDER_PAY_GET_TOTAL) is made of. The cards are capped on it.
+     * What the cart costs, in cents: taxes, discount, postage and gift wrapping included. It is the
+     * total the checkout summary shows, the one the payment composition of the core splits
+     * (OrderPaymentComposer) and the order total a payment module is asked for is made of, no more,
+     * no less. The cards are capped on it.
      *
      * A core without gift wrapping ignores the last argument.
      */

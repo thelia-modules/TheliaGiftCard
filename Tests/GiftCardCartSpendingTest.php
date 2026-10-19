@@ -16,6 +16,7 @@ use Thelia\Core\Event\TheliaEvents;
 use Thelia\Model\Cart;
 use Thelia\Model\CartQuery;
 use Thelia\Model\Customer;
+use Thelia\Model\GiftWrapping;
 use Thelia\Model\ModuleQuery;
 use Thelia\Model\Order;
 use Thelia\Module\PaymentModuleInterface;
@@ -164,6 +165,63 @@ final class GiftCardCartSpendingTest extends GiftCardTestCase
         }
 
         self::assertSame(1, $cleared);
+    }
+
+    public function testTheCartIsPaidAsMuchAsItCostsOnceTheCouponsAreOff(): void
+    {
+        [$customer, $cart] = $this->cartOf(90.0, '10');
+        $giftCard = $this->giftCard(['amount' => '150', 'beneficiaryCustomerId' => $customer->getId()]);
+        $cart->setDiscount('20')->save();
+        self::assertSame(8000, $this->spending()->cartTotal($cart), 'The cart costs 80.00 with its coupon.');
+        // What the coupon manager does when the coupons are taken off: the discount goes.
+        $listener = static function () use ($cart): void {
+            $cart->setDiscount('0')->save();
+        };
+        $dispatcher = $this->dispatcher();
+        $dispatcher->addListener(TheliaEvents::COUPON_CLEAR_ALL, $listener, 255);
+
+        try {
+            $spent = $this->spending()->spendAsMuchAsTheCartCosts($customer, $cart, [$giftCard->getId()]);
+        } finally {
+            $dispatcher->removeListener(TheliaEvents::COUPON_CLEAR_ALL, $listener);
+        }
+
+        self::assertSame(10000, $spent, 'The coupon is gone: the cart costs 100.00 and the card pays all of it.');
+        self::assertTrue($this->spending()->coversTheCart($cart));
+    }
+
+    public function testTheTotalOfTheCartIsTheOneTheCoreSplitsGiftWrappingIncluded(): void
+    {
+        [$customer, $cart] = $this->cartOf(90.0, '10');
+        $fixtures = $this->createFixtureFactory();
+        $wrapping = (new GiftWrapping())
+            ->setCode('gift-card-test-'.uniqid())
+            ->setPrice('5.000000')
+            ->setTaxRuleId($fixtures->taxRule(['isDefault' => false])->getId())
+            ->setActive(1);
+        $wrapping->save();
+        $cart->setGiftWrappingId($wrapping->getId())->save();
+        $giftCard = $this->giftCard(['amount' => '100', 'beneficiaryCustomerId' => $customer->getId()]);
+
+        $this->spending()->spendAsMuchAsTheCartCosts($customer, $cart, [$giftCard->getId()]);
+
+        self::assertSame(10500, $this->spending()->cartTotal($cart), '90.00 of lines, 10.00 of postage, 5.00 of wrapping.');
+        self::assertSame(10000, $this->spending()->amountOnCart($cart));
+        self::assertFalse($this->spending()->coversTheCart($cart), 'A card of 100.00 does not cover a cart of 105.00.');
+    }
+
+    public function testACodeIsReadAsACardOfTheCustomerOnly(): void
+    {
+        [$customer] = $this->cartOf(90.0, '10');
+        $other = $this->createFixtureFactory()->customer($this->createFixtureFactory()->customerTitle());
+        $mine = $this->giftCard(['amount' => '50', 'beneficiaryCustomerId' => $customer->getId(), 'code' => 'MINE00001']);
+        $this->giftCard(['amount' => '50', 'beneficiaryCustomerId' => $other->getId(), 'code' => 'OTHERS0001']);
+        $this->giftCard(['amount' => '50', 'code' => 'FREE000001']);
+
+        self::assertSame((int) $mine->getId(), $this->spending()->spendableCardIdOfCustomerByCode($customer, ' MINE00001 '));
+        self::assertNull($this->spending()->spendableCardIdOfCustomerByCode($customer, 'OTHERS0001'));
+        self::assertNull($this->spending()->spendableCardIdOfCustomerByCode($customer, 'FREE000001'), 'A card nobody holds is not the customer\'s yet.');
+        self::assertNull($this->spending()->spendableCardIdOfCustomerByCode($customer, ''));
     }
 
     public function testOnlyTheEnabledUnexpiredCardsOfTheCustomerAreListed(): void

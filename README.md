@@ -42,6 +42,18 @@ Requires Thelia 3.3.0: the module is an instant payment means of the core (`Inst
   module is not asked to pay it. It no longer answers `ORDER_PAY_GET_TOTAL` for an order with payment parts (the core
   answers it with the balance left for the provider), and keeps one listener on it for an order with no part that has
   rows in `gift_card_order` (see below), a transition to remove in a later version.
+- The payment step of the Flexy theme: the module draws its line in the `checkout.payment.parts` theme hook
+  (`GiftCardPaymentPartThemeHook`, which answers only for its own module id) with a live component
+  (`TheliaGiftCard:PaymentPart`). The buyer ticks one of their cards, or types the code of one (activated on their
+  account on the way, with the limits of the activation form; every refusal reads the same), or takes the cards off.
+  Each action is written on the cart by the module (`GiftCardCartSelection`), then the component emits
+  `PAYMENT_PARTS_CHANGED` for the step to read the payment composition again. The module never writes the payment module
+  of the cart: the theme does. The component is built from Flexy's own components and keys; another theme draws its own.
+- The entry of 3.2.8 stays: `POST /gift-card/spend` and the form and lines of the `checkout.summary.bottom` hook write the
+  same cards on the cart, which the part is read from. The summary's "paid by gift card" and "left to pay" are the part
+  the core composes for the order and the balance it leaves to the provider, the gift wrapping included (a test compares
+  them with `OrderPaymentComposer`). The summary reads the cards only: a part of another instant means is not in its
+  "left to pay".
 - The part is spent from the cards of the cart the order comes from, in the order they were put on it, each for what
   was put on it at most. A card disabled, expired or spent elsewhere since refuses the part, and so do cards that no
   longer cover it.

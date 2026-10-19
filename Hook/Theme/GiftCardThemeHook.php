@@ -90,8 +90,8 @@ final readonly class GiftCardThemeHook implements ThemeHookInterface
             return '';
         }
 
-        // The rule PaymentListener applies to the order total: what is read here is what the
-        // payment module will be asked for.
+        // The total the core composes the parts of the order from (OrderPaymentComposer): what is
+        // read here is what the core plans for the cards and leaves for the payment module.
         $cartTotal = $this->cartSpending->cartTotal($cart);
 
         return $this->twig->render(self::CHECKOUT_SUMMARY_TEMPLATE, [
