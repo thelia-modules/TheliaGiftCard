@@ -29,7 +29,7 @@ picked in the card list for a download); the templates receive it as `gift_card_
 
 ## Changes
 
-### Unreleased
+### 3.3.0
 
 Requires Thelia 3.3.0: the module is an instant payment means of the core (`InstantPaymentModuleInterface`).
 
