@@ -21,6 +21,23 @@ final class GiftCardAmount
         return (int) round(((float) ($amount ?? 0)) * 100);
     }
 
+    /**
+     * Cents of a decimal string, by decimal arithmetic (no float), rounded half up to the cent:
+     * what two sums of DECIMAL columns are compared with, where a float could differ by a cent.
+     *
+     * @throws \InvalidArgumentException on a negative amount: none is spent, given back or asked
+     */
+    public static function exactCents(string $amount): int
+    {
+        $amount = '' === trim($amount) ? '0' : trim($amount);
+
+        if (str_starts_with($amount, '-')) {
+            throw new \InvalidArgumentException(\sprintf('A negative amount (%s) is not an amount of money to add up.', $amount));
+        }
+
+        return (int) bcmul(bcadd($amount, '0.005', 2), '100', 0);
+    }
+
     public static function decimal(int $cents): string
     {
         return number_format($cents / 100, 2, '.', '');

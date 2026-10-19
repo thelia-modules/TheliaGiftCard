@@ -16,9 +16,7 @@ use Thelia\Core\Event\TheliaEvents;
 use Thelia\Model\CartItemQuery;
 use TheliaGiftCard\Model\GiftCardInfoCart;
 use TheliaGiftCard\Model\GiftCardInfoCartQuery;
-use TheliaGiftCard\Exception\GiftCardPaymentRefusedException;
 use TheliaGiftCard\Service\GiftCardGenerateService;
-use TheliaGiftCard\Service\GiftCardPaymentService;
 use TheliaGiftCard\Service\GiftCardService;
 use TheliaGiftCard\TheliaGiftCard;
 
@@ -29,7 +27,6 @@ class OrderPayListener implements EventSubscriberInterface
         protected GiftCardService         $giftCardService,
         protected GiftCardGenerateService $giftCardGenerateService,
         protected EventDispatcherInterface $dispatcher,
-        protected GiftCardPaymentService $giftCardPaymentService,
     )
     {}
 
@@ -38,25 +35,6 @@ class OrderPayListener implements EventSubscriberInterface
         if ($event->getOrder()->getStatusId() == TheliaGiftCard::getGiftCardOrderStatusId()) {
             $this->giftCardGenerateService->generateGifcard($event->getOrder());
         }
-    }
-
-    /**
-     * Debits the cards put on the cart the order comes from, once the order exists and before
-     * the payment module is called: the module reads the total less what was debited
-     * (PaymentListener::handleGiftCard), and a card refused here leaves an unpaid order rather
-     * than an order a payment module already marked paid.
-     *
-     * @throws GiftCardPaymentRefusedException when a card of the cart can no longer pay its share
-     */
-    public function onOrderPayGiftCard(OrderEvent $event): void
-    {
-        $order = $event->hasPlacedOrder() ? $event->getPlacedOrder() : $event->getOrder();
-
-        if (null === $order->getId() || null === $order->getCartId()) {
-            return;
-        }
-
-        $this->giftCardPaymentService->debitCart($order, (int) $order->getCartId());
     }
 
     /**
@@ -116,8 +94,6 @@ class OrderPayListener implements EventSubscriberInterface
     {
         return [
             TheliaEvents::ORDER_UPDATE_STATUS => ['creatCodeGiftCard', 128],
-            // Before the confirmation e-mails (128) and before the payment module is called.
-            TheliaEvents::ORDER_BEFORE_PAYMENT => ['onOrderPayGiftCard', 192],
             TheliaEvents::ORDER_PAY => ['onOrderPayGiftCardHandleInfo', 100],
         ];
     }

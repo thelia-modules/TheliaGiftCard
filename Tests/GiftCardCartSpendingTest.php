@@ -29,7 +29,6 @@ use TheliaGiftCard\Model\GiftCardCartQuery;
 use TheliaGiftCard\Model\GiftCardOrderQuery;
 use TheliaGiftCard\Model\GiftCardQuery;
 use TheliaGiftCard\Service\GiftCardCartSpending;
-use TheliaGiftCard\Service\GiftCardPaymentService;
 use TheliaGiftCard\Service\GiftCardService;
 
 /**
@@ -206,46 +205,31 @@ final class GiftCardCartSpendingTest extends GiftCardTestCase
         self::assertSame(0, $this->spending()->amountOnCart($cart));
     }
 
-    public function testThePaymentModuleIsAskedForTheTotalLessTheCardsOfTheOrderCart(): void
+    public function testTheCardsPutInTheCartTakeNothingOffTheTotalOfAnOrderNotDebited(): void
     {
-        // A cart of 100 € with 30 € of gift card: PayPal reads ORDER_PAY_GET_TOTAL on the order.
+        // The core answers ORDER_PAY_GET_TOTAL with the balance left for the provider: cards that are
+        // only put on the cart have debited nothing, and the module takes nothing off the total for them
+        // (only what an order of the previous releases had debited, see GiftCardTransitionTotalTest).
         [$order, $cart] = $this->orderOf(100.0);
         $this->putInCart($cart, $this->giftCard(['amount' => '50']), '30');
 
-        self::assertSame(70.0, $this->payTotal($order));
+        self::assertSame(100.0, $this->payTotal($order));
     }
 
-    public function testAnAmountBeyondTheTotalIsDebitedForTheTotalOnly(): void
-    {
-        [$order, $cart] = $this->orderOf(100.0);
-        $first = $this->giftCard(['amount' => '80']);
-        $second = $this->giftCard(['amount' => '80']);
-        $this->putInCart($cart, $first, '80');
-        $this->putInCart($cart, $second, '40');
-
-        // Before the debit, the payment deducts the whole total, not nothing.
-        self::assertSame(0.0, $this->payTotal($order));
-
-        (new GiftCardPaymentService())->debitCart($order, (int) $cart->getId());
-
-        self::assertSame([80.0, 20.0], [$this->spentOn($first), $this->spentOn($second)]);
-        self::assertSame(0.0, $this->payTotal($order));
-    }
-
-    public function testTheCardsAreDebitedBeforeThePaymentModuleIsCalled(): void
+    public function testTheModuleDebitsNothingBeforeTheCoreAsksToSettleThePart(): void
     {
         [$order, $cart] = $this->orderOf(100.0);
         $giftCard = $this->giftCard(['amount' => '50']);
         $this->putInCart($cart, $giftCard, '30');
 
-        self::assertSame(['onOrderPayGiftCard', 192], OrderPayListener::getSubscribedEvents()[TheliaEvents::ORDER_BEFORE_PAYMENT]);
-        $listener = static::getContainer()->get(OrderPayListener::class);
-        self::assertInstanceOf(OrderPayListener::class, $listener);
-        $listener->onOrderPayGiftCard(new OrderEvent($order));
+        $this->dispatcher()->dispatch(new OrderEvent($order), TheliaEvents::ORDER_BEFORE_PAYMENT);
+        self::assertArrayNotHasKey(TheliaEvents::ORDER_BEFORE_PAYMENT, OrderPayListener::getSubscribedEvents());
 
-        self::assertSame(30.0, $this->spentOn($giftCard));
-        self::assertSame(1, GiftCardOrderQuery::create()->filterByOrderId($order->getId())->count());
-        self::assertSame(70.0, $this->payTotal($order));
+        self::assertSame(0.0, $this->spentOn($giftCard));
+        self::assertSame(0, GiftCardOrderQuery::create()->filterByOrderId($order->getId())->count());
+        foreach ($this->dispatcher()->getListeners(TheliaEvents::ORDER_BEFORE_PAYMENT) as $listener) {
+            self::assertFalse(\is_array($listener) && str_starts_with($listener[0]::class, 'TheliaGiftCard\\'), 'The module listens to ORDER_BEFORE_PAYMENT.');
+        }
     }
 
     /**

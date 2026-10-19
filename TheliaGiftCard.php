@@ -15,12 +15,12 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\CacheStorage;
 use Thelia\Core\Event\Feature\FeatureCreateEvent;
-use Thelia\Core\Event\Order\OrderEvent;
 use Thelia\Core\Event\Template\TemplateCreateEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Core\Install\Database;
 use Thelia\Core\Translation\Translator;
 use Thelia\Model\Base\FeatureTemplateQuery;
+use Thelia\Model\Cart;
 use Thelia\Model\CategoryQuery;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\FeatureI18nQuery;
@@ -28,26 +28,44 @@ use Thelia\Model\FeatureQuery;
 use Thelia\Model\FeatureTemplate;
 use Thelia\Model\Lang;
 use Thelia\Model\Order;
-use Thelia\Model\OrderStatusQuery;
+use Thelia\Model\OrderPaymentPart;
 use Thelia\Model\ProductCategory;
 use Thelia\Model\ProductCategoryQuery;
 use Thelia\Model\TemplateI18nQuery;
 use Thelia\Model\TemplateQuery;
 use Thelia\Module\AbstractPaymentModule;
+use Thelia\Module\InstantPaymentModuleInterface;
 use TheliaGiftCard\Model\GiftCardCartQuery;
 use TheliaGiftCard\Model\GiftCardQuery;
 use TheliaGiftCard\Model\Map\GiftCardCartTableMap;
 use TheliaGiftCard\Service\GiftCardActivationLimiter;
 use TheliaGiftCard\Service\GiftCardCodeGenerator;
 use TheliaGiftCard\Service\GiftCardCodeUniqueIndex;
+use TheliaGiftCard\Service\GiftCardPaymentService;
 use TheliaGiftCard\Service\GiftCardService;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
-class TheliaGiftCard extends AbstractPaymentModule
+/**
+ * A payment means that settles part of an order at once, inside the shop: the buyer puts cards on the
+ * cart (gift_card_cart), the core asks how much they pay when the order is placed, settles the part
+ * when it is paid and has it released when the order is cancelled. The module neither splits the
+ * total, nor debits before the core asks, nor sets the status of the order.
+ *
+ * It answers ORDER_PAY_GET_TOTAL for one kind of order only, a transition: an order with no payment
+ * part that has rows in gift_card_order (placed with a release that debited the cards before the
+ * payment). For an order with parts the core answers, and the module takes nothing off the total a
+ * second time (PaymentListener::deductWhatWasDebitedBeforePaymentParts).
+ */
+class TheliaGiftCard extends AbstractPaymentModule implements InstantPaymentModuleInterface
 {
     public const DOMAIN_NAME = 'theliagiftcard';
     public const MODULE_CODE = 'TheliaGiftCard';
+
+    /**
+     * Public alias declared in Config/config.xml: the module reads its payment service from the container.
+     */
+    public const PAYMENT_SERVICE_ID = 'gift.card.payment.service';
 
     /**
      * Front-office translation domain. Thelia derives it from the name of the template
@@ -148,12 +166,64 @@ class TheliaGiftCard extends AbstractPaymentModule
         return $giftCardService->isGiftCardPayment();
     }
 
+    /**
+     * What the cards put on the cart add up to, a decimal string, "0" when there is none.
+     *
+     * Read from the rows of the cart, which a payment leaves in place: the answer is the same once the
+     * part is settled, as long as the order is not paid, and no card is read again here.
+     */
+    public function getAmountAppliedToCart(Cart $cart): string
+    {
+        /** @var GiftCardService $giftCardService */
+        $giftCardService = $this->getContainer()->get('gift.card.service');
+
+        return $giftCardService->getAmountAppliedToCart($cart);
+    }
+
+    /**
+     * Spends the part from the cards of the cart the order comes from. Throws to refuse: the core is
+     * the one that rolls back.
+     */
+    public function settlePart(OrderPaymentPart $part): void
+    {
+        $this->paymentService()->spend($part->getOrder(), (string) $part->getAmount());
+    }
+
+    /**
+     * Credits the cards back what the order spent from them, for the amount of the part. Throws, and
+     * credits nothing, when the rows of the order read under the locks do not add up to that amount
+     * (including when there are none: a part settled always left rows, so none means they were already
+     * given back, or that this transaction cannot see them yet). The core logs it and leaves the part
+     * settled, a later cancellation asks again; a module that returned quietly would lose the credit.
+     */
+    public function releasePart(OrderPaymentPart $part): void
+    {
+        $this->paymentService()->release((int) $part->getOrderId(), (string) $part->getAmount());
+    }
+
+    /**
+     * The service of the container when the module has one, a new one when the module was
+     * instantiated outside the kernel: it holds no state.
+     */
+    private function paymentService(): GiftCardPaymentService
+    {
+        if ($this->hasContainer() && $this->getContainer()->has(self::PAYMENT_SERVICE_ID)) {
+            $service = $this->getContainer()->get(self::PAYMENT_SERVICE_ID);
+
+            if ($service instanceof GiftCardPaymentService) {
+                return $service;
+            }
+        }
+
+        return new GiftCardPaymentService();
+    }
+
+    /**
+     * The order a card pays whole is turned paid by the core once its part is settled, and the core
+     * does not ask the module to pay it: nothing is left to do here, in particular no status to set.
+     */
     public function pay(Order $order): ?Response
     {
-        $event = new OrderEvent($order);
-        $event->setStatus(OrderStatusQuery::getPaidStatus()->getId());
-        $this->getDispatcher()->dispatch($event, TheliaEvents::ORDER_UPDATE_STATUS);
-
         return null;
     }
 

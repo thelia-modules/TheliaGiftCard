@@ -29,6 +29,80 @@ picked in the card list for a download); the templates receive it as `gift_card_
 
 ## Changes
 
+### Unreleased
+
+Requires Thelia 3.3.0: the module is an instant payment means of the core (`InstantPaymentModuleInterface`).
+
+- The cards put on the cart are still the buyer's choice, kept by the module. When the order is placed the core asks
+  the module how much they pay (`getAmountAppliedToCart()`, the sum of the cards on the cart, the same until the order is
+  paid), makes it one part of the order, and asks the module to spend it (`settlePart()`) when the order is paid, all
+  parts or none. A cancelled order has its part released (`releasePart()`), once.
+- Removed: the module no longer splits the total itself, no longer debits the cards on `ORDER_BEFORE_PAYMENT` and no
+  longer sets the status of the order in `pay()`: an order the cards pay in full is turned paid by the core, and the
+  module is not asked to pay it. It no longer answers `ORDER_PAY_GET_TOTAL` for an order with payment parts (the core
+  answers it with the balance left for the provider), and keeps one listener on it for an order with no part that has
+  rows in `gift_card_order` (see below), a transition to remove in a later version.
+- The part is spent from the cards of the cart the order comes from, in the order they were put on it, each for what
+  was put on it at most. A card disabled, expired or spent elsewhere since refuses the part, and so do cards that no
+  longer cover it.
+- Giving back credits each row of the order once: the cards are locked by primary key, then the rows of
+  `gift_card_order` of the order are read again under a lock, so a release replayed or run twice at once credits once
+  (proved with two PHP processes against the database, `GiftCardReleaseConcurrencyTest`). `releasePart()` also gives
+  the release the amount of the part: the rows read under the locks, added up in cents by decimal arithmetic, must
+  equal it, or nothing is credited and `GiftCardReleaseRefusedException` is thrown. This is the guard against a
+  release whose transaction took its read view before another request committed the settlement: its first read of the
+  rows is then stale (or sees none), and without the amount it would credit less than was spent, silently. The core
+  logs the exception and leaves the part `settled`. What this does not cover: the cause itself, a transaction that
+  reads before it locks the order, is the core's to fix (it locks the order first); the guard only keeps the effect
+  from being silent. The 1020 error of MariaDB 11.6.2 and later (snapshot isolation) on these locking reads is turned
+  into the same exception; the test database of the monorepo is MariaDB 10.11, so that error is only simulated.
+- A row of `gift_card_order` is never deleted: giving it back sets its `status` to 1 (0: spent) once the card is
+  credited, so that a replay (the part of a refunded then cancelled order, a release run twice) is told from a release
+  that sees nothing: the first succeeds without crediting and the core turns the part `released`, the second is
+  refused. The column is nullable and a row with no status (SQL import, migration from Thelia 2) counts as spent,
+  like in the release: every reader of the table that means "what the order spent" filters on
+  `status = 0 OR status IS NULL` (`GiftCardOrderQuery::filterBySpent()`): the usage block of the order, the history
+  of a card, the listeners of the module and the `gift.card.order.list` loop, whose new `status` argument defaults
+  to 0 (pass 1 for the rows given back; `STATUS` says which a row is, 0 for a row with no status).
+- A refused release is not retried by anything: the part stays `settled` and the core logs `Payment part … could not be
+  released`. To find the orders that wait for one (cancelled, part of the gift card module still settled, rows still
+  spent):
+
+  ```sql
+  SELECT o.id, o.ref, p.id AS part_id, p.amount
+  FROM order_payment_part p
+  JOIN `order` o ON o.id = p.order_id
+  JOIN order_status s ON s.id = o.status_id AND s.code = 'canceled'
+  JOIN module m ON m.id = p.payment_module_id AND m.code = 'TheliaGiftCard'
+  WHERE p.state = 'settled'
+    AND EXISTS (SELECT 1 FROM gift_card_order g WHERE g.order_id = o.id AND (g.status = 0 OR g.status IS NULL));
+  ```
+
+  For each one, trigger the cancellation again from the back office (turn the order to a status that is not paid, then to
+  cancelled again; this can move the stock, and a move to paid is refused by the guard): the core asks the module to
+  release the part once more, from a new transaction. A refusal because
+  the database reported a snapshot conflict (MariaDB 11.6.2 and later) passes then. Without the `EXISTS` condition the
+  query also lists the cancelled orders whose part is `settled` with no row at all in `gift_card_order`: nothing can
+  be credited by the module for those; check the card (`gift_card.spend_amount`) by hand, and only then set the part
+  to `released` (`UPDATE order_payment_part SET state = 'released' WHERE id = …`).
+- Neither `settlePart()` nor `releasePart()` begins, commits or rolls back a transaction: they throw, the core rolls
+  back. The listener of the module on the status of an order (priority 1, after the core) gives back the rows of the
+  refunded orders, which the core leaves alone, and of the orders with no payment part; a cancelled order that has
+  parts is left to the core, so that a release the module refused is not credited around the part. It does what it does
+  inside a transaction someone else opened without ending it, and opens its own only when none is open.
+- The total asked by a payment module, for an order with no payment part that has rows in `gift_card_order` (placed with
+  the previous release, which debited the cards before the payment), is the total less what was debited, never below
+  nothing, even when the cards have left the cart since. The listener runs at priority 60, after the core (128), and
+  does nothing for an order with parts, so it never deducts what the core already accounts for.
+- Orders paid before this release have no payment part, only rows in `gift_card_order`: cancelling or refunding one
+  still gives its cards back, through the same release. Carts need no migration, `gift_card_cart` is unchanged.
+- An order placed with the previous release and not paid yet, with its cards already debited, has no payment part. Paid
+  by its provider, it is turned paid as before. Paid again from the same cart, the core places another order, with
+  parts, and cancels this one, which gives its cards back. One case is not covered: such an order that names the gift
+  card module itself (cards paying everything) was waiting for `pay()` to set its status, which no longer does. The
+  window is the failure between the debit and the status change of the previous release; look for orders of the gift
+  card module, not paid, that have rows in `gift_card_order`, and turn them paid by hand or cancel them.
+
 ### 3.2.8
 
 - A customer can spend their gift cards at checkout again. The form posted to `/gift-card/spend`, which went away with the OpenApi module; the route is back in the module (`POST /gift-card/spend`, signed-in customer, CSRF token), and puts the chosen cards on the cart through `GiftCardCartSpending::spend()` before going back to the payment step.
@@ -141,3 +215,17 @@ DATABASE_HOST=… DATABASE_PORT=… DATABASE_NAME=giftcard_test DATABASE_USER=�
 ```
 
 `GiftCardCodeUniqueIndexTest` drops and recreates the unique index of the test database.
+
+`GiftCardReleaseConcurrencyTest` commits its fixtures (and deletes them) and starts PHP processes of its own
+(`Tests/release-in-another-process.php`, `Tests/spend-in-another-process.php`) with the environment of the test, so
+that they work on the same database: it needs `proc_open` and the `PROCESSLIST` of the database account. The
+processes boot the bootstrap `tests/bootstrap.php` of the project when there is one, otherwise `Tests/bootstrap.php`.
+
+In the Thelia monorepo (DDEV), once `TEST_TOKEN=<n> composer test:prepare` has built the database `test_<n>` and
+activated the module:
+
+```
+ddev exec "env -u DATABASE_HOST -u DATABASE_PORT -u DATABASE_NAME -u DATABASE_USER -u DATABASE_PASSWORD \
+  APP_ENV=test APP_DEBUG=0 KERNEL_CLASS='App\\Kernel' TEST_TOKEN=<n> \
+  php ./vendor/bin/phpunit --no-configuration --bootstrap tests/bootstrap.php vendor/thelia/modules/TheliaGiftCard/Tests"
+```

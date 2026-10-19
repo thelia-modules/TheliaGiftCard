@@ -53,6 +53,7 @@ class HookManager extends BaseHook
 
         $giftCardOrders = GiftCardOrderQuery::create()
             ->filterByOrderId($orderId)
+            ->filterBySpent()
             ->find();
 
         foreach ($giftCardOrders as $giftCardOrder) {
