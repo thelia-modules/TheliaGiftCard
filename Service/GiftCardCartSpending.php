@@ -177,13 +177,17 @@ final readonly class GiftCardCartSpending
     }
 
     /**
-     * What the cart costs, taxes, discount and postage included, in cents.
+     * What the order placed from the cart will cost, in cents: taxes, discount, postage and gift
+     * wrapping included — the total the checkout summary shows, which the order total the
+     * payment module is asked for (ORDER_PAY_GET_TOTAL) is made of. The cards are capped on it.
+     *
+     * A core without gift wrapping ignores the last argument.
      */
     public function cartTotal(Cart $cart): int
     {
         [$country, $state] = $this->taxationPlaceOf($cart);
 
-        return GiftCardAmount::cents($cart->getTaxedAmount($country, true, $state, true));
+        return GiftCardAmount::cents($cart->getTaxedAmount($country, true, $state, true, true));
     }
 
     /**

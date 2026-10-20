@@ -14,6 +14,7 @@ use Thelia\Core\HttpFoundation\Session\Session;
 use Thelia\Model\Cart;
 use Thelia\Model\Currency;
 use Thelia\Model\Customer;
+use Thelia\Model\GiftWrapping;
 use Thelia\Model\Lang;
 use Thelia\Model\ModuleQuery;
 use Thelia\Module\BaseModule;
@@ -79,6 +80,30 @@ final class GiftCardSpendControllerTest extends GiftCardTestCase
         self::assertStringContainsString('action="/gift-card/spend"', $html);
     }
 
+    /**
+     * The gift wrapping is a line of the order the payment module is asked to be paid for: the
+     * cards are capped on a total that holds it, and the summary leaves it to pay.
+     */
+    public function testTheGiftWrappingIsPartOfWhatTheCardsPayAndOfWhatIsLeftToPay(): void
+    {
+        [$customer, $cart] = $this->cartOf(50.0, '5');
+        $this->wrap($cart, '4');
+        $smallCard = $this->giftCard(['amount' => '20', 'beneficiaryCustomerId' => $customer->getId()]);
+
+        $this->postSpend($customer, $cart, [(string) $smallCard->getId()], '20');
+        $html = $this->renderSummaryHook($customer, $cart);
+
+        self::assertMatchesRegularExpression('/data-gift-card-left-to-pay>.*?39[.,]00/s', $html);
+
+        $bigCard = $this->giftCard(['amount' => '100', 'beneficiaryCustomerId' => $customer->getId()]);
+        $this->postSpend($customer, $cart, [(string) $bigCard->getId()], '100');
+        $html = $this->renderSummaryHook($customer, $cart);
+
+        self::assertSame('59.00', $this->amountOnCart($cart), 'The card pays the wrapping too.');
+        self::assertMatchesRegularExpression('/data-gift-card-paid>.*?59[.,]00/s', $html);
+        self::assertMatchesRegularExpression('/data-gift-card-left-to-pay>.*?0[.,]00/s', $html);
+    }
+
     public function testTheSummaryShowsNothingBeforeACarrierIsChosen(): void
     {
         [$customer, $cart] = $this->cartOf(90.0, '10');
@@ -139,6 +164,19 @@ final class GiftCardSpendControllerTest extends GiftCardTestCase
         $session->setSessionCart($cart);
 
         return $session;
+    }
+
+    private function wrap(Cart $cart, string $price): void
+    {
+        $giftWrapping = (new GiftWrapping())
+            ->setCode('wrap-'.bin2hex(random_bytes(4)))
+            ->setPrice($price)
+            // Untaxed, as the lines of the cart: the amounts read as written.
+            ->setTaxRuleId((int) $this->createFixtureFactory()->taxRule(['isDefault' => false])->getId())
+            ->setActive(1);
+        $giftWrapping->save();
+
+        $cart->setGiftWrappingId($giftWrapping->getId())->save();
     }
 
     private function amountOnCart(Cart $cart): string

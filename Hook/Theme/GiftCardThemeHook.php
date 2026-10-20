@@ -90,13 +90,14 @@ final readonly class GiftCardThemeHook implements ThemeHookInterface
             return '';
         }
 
+        // The rule PaymentListener applies to the order total: what is read here is what the
+        // payment module will be asked for.
         $cartTotal = $this->cartSpending->cartTotal($cart);
-        $paidWithCards = min($paidWithCards, $cartTotal);
 
         return $this->twig->render(self::CHECKOUT_SUMMARY_TEMPLATE, [
             'cards' => $cards,
-            'paidWithCards' => GiftCardAmount::decimal($paidWithCards),
-            'leftToPay' => GiftCardAmount::decimal($cartTotal - $paidWithCards),
+            'paidWithCards' => GiftCardAmount::decimal(GiftCardAmount::paidByCards($cartTotal, $paidWithCards)),
+            'leftToPay' => GiftCardAmount::decimal(GiftCardAmount::leftToPay($cartTotal, $paidWithCards)),
         ]);
     }
 
