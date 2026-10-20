@@ -64,7 +64,12 @@ abstract class GiftCardTestCase extends IntegrationTestCase
         $category = $fixtures->category();
         ConfigQuery::write(TheliaGiftCard::GIFT_CARD_CATEGORY_CONF_NAME, (string) $category->getId(), false, true);
 
-        return $fixtures->product($category, $fixtures->taxRule(), $fixtures->currency(), ['basePrice' => $price]);
+        $product = $fixtures->product($category, $fixtures->taxRule(), $fixtures->currency(), ['basePrice' => $price]);
+
+        // In stock: the cart refuses a line beyond the stock it sells from.
+        ProductSaleElementsQuery::create()->filterByProductId($product->getId())->update(['Quantity' => 10]);
+
+        return $product;
     }
 
     protected function orderLine(Order $order, Product $product, int $quantity, float $price, float $tax = 0.0): OrderProduct
