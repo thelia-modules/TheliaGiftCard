@@ -1,0 +1,74 @@
+{# Gift cards at checkout: what the cards put on the cart pay, what is left to pay, and the form
+   that puts them on the cart. Rendered by TheliaGiftCard\Hook\Theme\GiftCardThemeHook on the
+   `checkout.summary.bottom` theme hook point, under the total of the checkout summary.
+
+   "Left to pay" is the amount the payment module asks for: PaymentListener takes what the cards
+   pay off the total on ORDER_PAY_GET_TOTAL. The summary sits in a live component that redraws
+   itself: the form is a plain POST to /gift-card/spend, no script.
+
+   Translated with |theliagiftcard_trans (see account-gift-card.html.twig). Lines reuse the
+   summary classes of the theme (Summary-total), fields its Input classes. #}
+{% if paidWithCards > 0 %}
+    <div class="Summary-total" data-gift-card-paid>
+        <div>{{ 'Paid by gift card'|theliagiftcard_trans }}</div>
+        <div><span dir="ltr">&minus;{{ format_money(paidWithCards) }}</span></div>
+    </div>
+    <div class="Summary-total" data-gift-card-left-to-pay>
+        <div>{{ 'Left to pay'|theliagiftcard_trans }}</div>
+        <div><span dir="ltr">{{ format_money(leftToPay) }}</span></div>
+    </div>
+{% endif %}
+
+{% if cards|length %}
+    {% set form = getForm('consume_gift_card') %}
+
+    {{ form_start(form, {
+        action: path('gift_card_spend'),
+        method: 'POST',
+        attr: {class: 'flex flex-col gap-3 pt-4', 'data-gift-card-spend-form': ''},
+    }) }}
+        {{ form_row(form.success_url, {value: path('checkout_payment')}) }}
+        {{ form_row(form.error_url, {value: path('checkout_payment')}) }}
+
+        <p class="paragraph-6 font-semibold">{{ 'Pay with a gift card'|theliagiftcard_trans }}</p>
+
+        {% if form.vars.errors|length %}
+            <p class="Input-error paragraph-5" role="alert">{{ form.vars.errors|first.message }}</p>
+        {% endif %}
+
+        <fieldset class="flex flex-col gap-1">
+            <legend class="sr-only">{{ 'Select your Gift Card'|theliagiftcard_trans }}</legend>
+            {% for card in cards %}
+                {% set choice = form.gift_card_ids|filter(choice => choice.vars.value == card.id)|first %}
+                {% if choice %}
+                    <label class="flex items-center gap-2 paragraph-5">
+                        {{ form_widget(choice, {checked: card.amountOnCart > 0 or cards|length == 1}) }}
+                        <span>
+                            {{ 'Gift card of %amount%, %remaining% left'|theliagiftcard_trans({
+                                '%amount%': format_money(card.amount),
+                                '%remaining%': format_money(card.remainingAmount),
+                            }) }}
+                            {% if card.expirationDate %}
+                                ({{ 'valid until %date%'|theliagiftcard_trans({'%date%': card.expirationDate|format_date('medium')}) }})
+                            {% endif %}
+                        </span>
+                    </label>
+                {% endif %}
+            {% endfor %}
+        </fieldset>
+
+        <div class="Input">
+            <div class="Input-header">
+                <label class="Input-label" for="{{ form.amount_used.vars.id }}">{{ 'Amount to pay with the gift card'|theliagiftcard_trans }}</label>
+            </div>
+            <div class="Input-blockInput">
+                {{ form_widget(form.amount_used, {
+                    value: paidWithCards > 0 ? paidWithCards : null,
+                    attr: {class: 'Input-input', inputmode: 'decimal', autocomplete: 'off'},
+                }) }}
+            </div>
+        </div>
+
+        <button type="submit" class="button button-style">{{ 'Apply the gift card'|theliagiftcard_trans }}</button>
+    {{ form_end(form) }}
+{% endif %}

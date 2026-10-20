@@ -29,6 +29,13 @@ picked in the card list for a download); the templates receive it as `gift_card_
 
 ## Changes
 
+### 3.2.8
+
+- A customer can spend their gift cards at checkout again. The form posted to `/gift-card/spend`, which went away with the OpenApi module; the route is back in the module (`POST /gift-card/spend`, signed-in customer, CSRF token), and puts the chosen cards on the cart through `GiftCardCartSpending::spend()` before going back to the payment step.
+- The form and the "paid by gift card" / "left to pay" lines are rendered under the total of the Flexy checkout summary, on the `checkout.summary.bottom` theme hook, once a carrier is chosen. "Left to pay" is what the payment module asks for. A Flexy release without that hook shows nothing.
+- `ConsumeGiftCart` takes the ids of the cards (`gift_card_ids`, among the cards the customer can spend on the cart) and `amount_used`; `gift_card_codes` and `delivery_module_id` are gone. An amount of 0 takes the cards off the cart.
+- The unused Smarty hooks `order-invoice.giftcard-form` and `order-invoice.cart-giftcard-form` are no longer declared.
+
 ### 3.2.5
 
 - Placing an order paid in full by gift cards no longer ends on a 500 (`Call to a member function getProductSaleElementsId() on null` in `OrderPayListener`). Since Thelia 3 keeps the cart until its order is paid, the session hands back a new cart, not saved yet, as soon as the order is paid, which the gift card payment does while the order is placed. The `ORDER_PAY` listener read the id of that cart, null, and the query on a null cart id returned the details of every card created from the back office, which belong to no cart. The listener now reads the cart the order was placed from (`order.cart_id`), and only the details attached to a cart line.

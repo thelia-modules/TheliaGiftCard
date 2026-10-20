@@ -19,7 +19,6 @@ use Thelia\Core\Event\Order\OrderEvent;
 use Thelia\Core\Event\Template\TemplateCreateEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Core\Install\Database;
-use Thelia\Core\Template\TemplateDefinition;
 use Thelia\Core\Translation\Translator;
 use Thelia\Model\Base\FeatureTemplateQuery;
 use Thelia\Model\CategoryQuery;
@@ -139,46 +138,6 @@ class TheliaGiftCard extends AbstractPaymentModule
         };
         $dispatcher->addListener(ConsoleEvents::TERMINATE, $addIndex);
         $dispatcher->addListener(KernelEvents::TERMINATE, $addIndex);
-    }
-
-    public function getHooks(): array
-    {
-        return [
-            [
-                'type' => TemplateDefinition::FRONT_OFFICE,
-                'code' => 'order-invoice.giftcard-form',
-                'title' => [
-                    'fr_FR' => 'Gift Card invoice Hook',
-                    'en_US' => 'Gift Card invoice Hook',
-                ],
-                'description' => [
-                    'fr_FR' => 'Gift Card invoice Hook',
-                    'en_US' => 'Gift Card invoice Hook',
-                ],
-                'chapo' => [
-                    'fr_FR' => 'Gift Card invoice Hook',
-                    'en_US' => 'Gift Card invoice Hook',
-                ],
-                'active' => true,
-            ],
-            [
-                'type' => TemplateDefinition::FRONT_OFFICE,
-                'code' => 'order-invoice.cart-giftcard-form',
-                'title' => [
-                    'fr_FR' => 'Gift Card invoice cart Hook',
-                    'en_US' => 'Gift Card invoice cart Hook',
-                ],
-                'description' => [
-                    'fr_FR' => 'Gift Card invoice cart Hook',
-                    'en_US' => 'Gift Card invoice cart Hook',
-                ],
-                'chapo' => [
-                    'fr_FR' => 'Gift Card invoice cart Hook',
-                    'en_US' => 'Gift Card invoice cart Hook',
-                ],
-                'active' => true,
-            ],
-        ];
     }
 
     public function isValidPayment(): bool

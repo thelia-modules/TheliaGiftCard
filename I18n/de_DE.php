@@ -30,4 +30,7 @@ return array(
     'FORM_EDIT_AMOUNT_GC' => 'Betrag',
     'FORM_EDIT_EXPIRATION_GC' => 'Ablaufdatum',
     'FORM_EDIT_BENEFICIARY_ADDRESS' => 'E-Mail des Empfängers',
+    'The amount to spend is not a number.' => 'Der einzulösende Betrag ist keine Zahl.',
+    'A cart that holds a gift card cannot be paid with gift cards.' => 'Ein Warenkorb, der einen Geschenkgutschein enthält, kann nicht mit Geschenkgutscheinen bezahlt werden.',
+    'One of the selected gift cards cannot be spent by this customer.' => 'Einer der ausgewählten Geschenkgutscheine kann nicht eingelöst werden.',
 );

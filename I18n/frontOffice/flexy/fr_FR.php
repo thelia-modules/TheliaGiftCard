@@ -39,4 +39,11 @@ return array(
     'You don\'t have Gift Card yet.' => 'Vous n\'avez pas encore de carte cadeau.',
     'Yours Gift Cards' => 'Vos cartes cadeaux',
     'Yours Gift Cards bought' => 'Vos cartes cadeaux achetées',
+    'Paid by gift card' => 'Payé par carte cadeau',
+    'Left to pay' => 'Reste à payer',
+    'Pay with a gift card' => 'Payer avec une carte cadeau',
+    'Gift card of %amount%, %remaining% left' => 'Carte cadeau de %amount%, reste %remaining%',
+    'valid until %date%' => 'valable jusqu\'au %date%',
+    'Amount to pay with the gift card' => 'Montant à payer par carte cadeau',
+    'Apply the gift card' => 'Appliquer la carte cadeau',
 );

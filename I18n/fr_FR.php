@@ -48,4 +48,7 @@ return array(
     'FORM_EDIT_AMOUNT_GC' => 'Montant',
     'FORM_EDIT_EXPIRATION_GC' => 'Date d\'expiration',
     'FORM_EDIT_BENEFICIARY_ADDRESS' => 'E-mail du bénéficiaire',
+    'The amount to spend is not a number.' => 'Le montant à utiliser n\'est pas un nombre.',
+    'A cart that holds a gift card cannot be paid with gift cards.' => 'Un panier qui contient une carte cadeau ne peut pas être payé par carte cadeau.',
+    'One of the selected gift cards cannot be spent by this customer.' => 'Une des cartes cadeaux choisies ne peut pas être utilisée.',
 );
