@@ -9,11 +9,16 @@ declare(strict_types=1);
 
 namespace TheliaGiftCard\Hook\Theme;
 
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Hook\Theme\ThemeHookInterface;
+use Thelia\Core\HttpFoundation\Session\Session;
 use Thelia\Model\CategoryQuery;
+use Thelia\Model\Customer;
 use Thelia\Model\LangQuery;
 use Thelia\Tools\URL;
+use TheliaGiftCard\Service\GiftCardAmount;
+use TheliaGiftCard\Service\GiftCardCartSpending;
 use TheliaGiftCard\TheliaGiftCard;
 use Twig\Environment;
 
@@ -31,15 +36,19 @@ final readonly class GiftCardThemeHook implements ThemeHookInterface
 
     private const PRODUCT_TEMPLATE = '@TheliaGiftCardModule/frontOffice/flexy/TheliaGiftCard/product-additional-gift-card.html.twig';
 
+    private const CHECKOUT_SUMMARY_TEMPLATE = '@TheliaGiftCardModule/frontOffice/flexy/TheliaGiftCard/checkout-summary-gift-card.html.twig';
+
     public function __construct(
         private Environment $twig,
         private RequestStack $requestStack,
+        private EventDispatcherInterface $dispatcher,
+        private GiftCardCartSpending $cartSpending,
     ) {
     }
 
     public function supports(string $hookName): bool
     {
-        return \in_array($hookName, ['account.bottom', 'product.bottom'], true);
+        return \in_array($hookName, ['account.bottom', 'product.bottom', 'checkout.summary.bottom'], true);
     }
 
     public function render(string $hookName, array $parameters): string
@@ -47,8 +56,49 @@ final readonly class GiftCardThemeHook implements ThemeHookInterface
         return match ($hookName) {
             'account.bottom' => $this->renderAccount(),
             'product.bottom' => $this->renderProduct($parameters),
+            'checkout.summary.bottom' => $this->renderCheckoutSummary(),
             default => '',
         };
+    }
+
+    /**
+     * Under the total of the checkout summary: the form that puts the customer's cards on the
+     * cart, and what they pay and what is left to pay, the amount the payment module asks for.
+     *
+     * Only for a signed-in customer who has a card to spend or already put one on the cart, once
+     * a carrier is chosen: the cards pay the postage too, so the total is known only then.
+     */
+    private function renderCheckoutSummary(): string
+    {
+        $request = $this->requestStack->getCurrentRequest();
+        $session = null !== $request && $request->hasSession() ? $request->getSession() : null;
+
+        if (!$session instanceof Session || !($customer = $session->getCustomerUser()) instanceof Customer) {
+            return '';
+        }
+
+        $cart = $session->getSessionCart($this->dispatcher);
+
+        if (null === $cart->getId() || null === $cart->getDeliveryModuleId()) {
+            return '';
+        }
+
+        $cards = $this->cartSpending->spendableCards($customer, $cart);
+        $paidWithCards = $this->cartSpending->amountOnCart($cart);
+
+        if ([] === $cards && 0 === $paidWithCards) {
+            return '';
+        }
+
+        // The rule PaymentListener applies to the order total: what is read here is what the
+        // payment module will be asked for.
+        $cartTotal = $this->cartSpending->cartTotal($cart);
+
+        return $this->twig->render(self::CHECKOUT_SUMMARY_TEMPLATE, [
+            'cards' => $cards,
+            'paidWithCards' => GiftCardAmount::decimal(GiftCardAmount::paidByCards($cartTotal, $paidWithCards)),
+            'leftToPay' => GiftCardAmount::decimal(GiftCardAmount::leftToPay($cartTotal, $paidWithCards)),
+        ]);
     }
 
     /**

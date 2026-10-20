@@ -53,10 +53,10 @@ class PaymentListener implements EventSubscriberInterface
     public function handleGiftCard(OrderPayTotalEvent $event): void
     {
         $total = GiftCardAmount::cents($event->getTotal());
-        $paidWithGiftCards = min($total, $this->paidWithGiftCards($event->getOrder()));
+        $onCards = $this->paidWithGiftCards($event->getOrder());
 
-        if ($paidWithGiftCards > 0) {
-            $event->setTotal(($total - $paidWithGiftCards) / 100);
+        if (GiftCardAmount::paidByCards($total, $onCards) > 0) {
+            $event->setTotal(GiftCardAmount::leftToPay($total, $onCards) / 100);
         }
     }
 

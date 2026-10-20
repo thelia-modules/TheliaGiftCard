@@ -25,4 +25,24 @@ final class GiftCardAmount
     {
         return number_format($cents / 100, 2, '.', '');
     }
+
+    /**
+     * What the cards pay of a total, in cents: what was put on them, never more than the total.
+     *
+     * The one rule the payment (PaymentListener, on the order total) and the checkout summary
+     * (GiftCardThemeHook, on the cart total) both apply, so that the amount left to pay the
+     * customer reads is the amount the payment module asks for.
+     */
+    public static function paidByCards(int $totalCents, int $onCardsCents): int
+    {
+        return max(0, min($totalCents, $onCardsCents));
+    }
+
+    /**
+     * What is left to pay of a total once the cards paid their share, in cents.
+     */
+    public static function leftToPay(int $totalCents, int $onCardsCents): int
+    {
+        return $totalCents - self::paidByCards($totalCents, $onCardsCents);
+    }
 }
