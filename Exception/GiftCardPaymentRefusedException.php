@@ -15,8 +15,17 @@ use Thelia\Domain\Checkout\Exception\InvalidPaymentException;
  */
 final class GiftCardPaymentRefusedException extends InvalidPaymentException
 {
-    public function __construct(public readonly int $giftCardId, ?\Throwable $previous = null)
+    public function __construct(public readonly int $giftCardId, ?\Throwable $previous = null, string $message = 'One of your gift cards can no longer pay its share of this order. Please check your gift cards.')
     {
-        parent::__construct('One of your gift cards can no longer pay its share of this order. Please check your gift cards.', 0, $previous);
+        parent::__construct($message, 0, $previous);
+    }
+
+    /**
+     * The cart holds no card (the buyer took them off after the order was placed): there is no card to
+     * blame, the id is 0.
+     */
+    public static function noCardOnTheCart(): self
+    {
+        return new self(0, null, 'No gift card is put on your cart any more, so none can pay this order. Please check your gift cards.');
     }
 }

@@ -18,7 +18,6 @@ use TheliaGiftCard\EventListener\OrderPayListener;
 use TheliaGiftCard\Model\GiftCardInfoCart;
 use TheliaGiftCard\Model\GiftCardInfoCartQuery;
 use TheliaGiftCard\Service\GiftCardGenerateService;
-use TheliaGiftCard\Service\GiftCardPaymentService;
 use TheliaGiftCard\Service\GiftCardService;
 
 /**
@@ -111,7 +110,6 @@ final class GiftCardOrderPayInfoTest extends GiftCardTestCase
             $container->get(GiftCardService::class),
             $container->get(GiftCardGenerateService::class),
             $dispatcher,
-            new GiftCardPaymentService(),
         );
     }
 }

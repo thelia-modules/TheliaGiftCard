@@ -1,0 +1,7 @@
+{# The gift-card line of the "Pay part of your order with" block of the payment step, drawn by
+   TheliaGiftCard\Hook\Theme\GiftCardPaymentPartThemeHook on the `checkout.payment.parts` theme
+   hook point. `amount` is what the payment composition makes the cards pay.
+
+   One live component, keyed: it keeps its identity when the step draws itself again, and the
+   amount it is given is what makes it read the cart again when something else changed it. #}
+{{ component('TheliaGiftCard:PaymentPart', {appliedAmount: amount, key: 'gift-card-payment-part'}) }}

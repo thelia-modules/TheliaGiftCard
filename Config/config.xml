@@ -9,5 +9,6 @@
     </loops>
     <services>
         <service id="gift.card.service" alias="TheliaGiftCard\Service\GiftCardService" public="true"/>
+        <service id="gift.card.payment.service" alias="TheliaGiftCard\Service\GiftCardPaymentService" public="true"/>
     </services>
 </config>

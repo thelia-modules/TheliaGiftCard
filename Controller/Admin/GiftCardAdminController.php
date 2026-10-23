@@ -55,6 +55,7 @@ class GiftCardAdminController extends BaseAdminController
         $orders = [];
         $ordersGiftCard = GiftCardOrderQuery::create()
             ->filterByGiftCardId($giftCard->getId())
+            ->filterBySpent()
             ->find();
 
         /** @var GiftCardOrder $orderGiftCard */

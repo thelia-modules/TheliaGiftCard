@@ -8,9 +8,8 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Thelia\Core\Event\Order\OrderPayTotalEvent;
 use Thelia\Core\Event\Payment\IsValidPaymentEvent;
 use Thelia\Core\Event\TheliaEvents;
-use Thelia\Model\Order;
-use TheliaGiftCard\Model\GiftCardCartQuery;
-use TheliaGiftCard\Model\GiftCardOrder;
+use Thelia\Log\Tlog;
+use Thelia\Model\OrderPaymentPartQuery;
 use TheliaGiftCard\Model\GiftCardOrderQuery;
 use TheliaGiftCard\Service\GiftCardAmount;
 use TheliaGiftCard\Service\GiftCardService;
@@ -18,6 +17,15 @@ use TheliaGiftCard\TheliaGiftCard;
 
 class PaymentListener implements EventSubscriberInterface
 {
+    /**
+     * After the core, which sets the total of the order at 128 and which this listener subtracts from. The
+     * listener of the payment parts of the core, at 16, replaces the total with the balance of an order
+     * that has parts and does nothing for one that has none; this one does the opposite, so that the
+     * two never act on the same order and their relative order does not matter. 60 is the priority the
+     * previous releases used, which the core documents.
+     */
+    public const TOTAL_PRIORITY = 60;
+
     public function __construct(
         protected GiftCardService $giftCardService,
     ) {
@@ -26,7 +34,7 @@ class PaymentListener implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            TheliaEvents::ORDER_PAY_GET_TOTAL => ['handleGiftCard', 60],
+            TheliaEvents::ORDER_PAY_GET_TOTAL => ['deductWhatWasDebitedBeforePaymentParts', self::TOTAL_PRIORITY],
             TheliaEvents::MODULE_PAYMENT_IS_VALID => ['forceGiftCardPayment', 200],
         ];
     }
@@ -43,48 +51,45 @@ class PaymentListener implements EventSubscriberInterface
     }
 
     /**
-     * The total a payment module asks for, less what the gift cards pay.
+     * Transition, to remove in a later version: the total a payment module asks for, less what was
+     * debited from gift cards for an order placed with the previous releases.
      *
-     * What they pay is what was debited from them for this order, or, before the debit, what
-     * was put on the cart the order comes from — never more than the total: the card is only
-     * debited of what the payment deducts. The previous releases read the session cart, and
-     * deducted nothing at all when the cards went beyond the total.
+     * Those releases debited the cards on ORDER_BEFORE_PAYMENT and wrote no payment part: an order
+     * placed then and not paid yet is still paid by a module that asks ORDER_PAY_GET_TOTAL for the
+     * total, and the cards that were debited, which the buyer may have since taken off the cart, are
+     * not asked again. An order with payment parts is none of this listener's business: the core
+     * answers with the balance of its provider, and a deduction here would be a second one. Never below
+     * nothing.
      */
-    public function handleGiftCard(OrderPayTotalEvent $event): void
+    public function deductWhatWasDebitedBeforePaymentParts(OrderPayTotalEvent $event): void
     {
-        $total = GiftCardAmount::cents($event->getTotal());
-        $onCards = $this->paidWithGiftCards($event->getOrder());
+        $orderId = $event->getOrder()->getId();
 
-        if (GiftCardAmount::paidByCards($total, $onCards) > 0) {
-            $event->setTotal(GiftCardAmount::leftToPay($total, $onCards) / 100);
+        if (null === $orderId || OrderPaymentPartQuery::create()->filterByOrderId($orderId)->exists()) {
+            return;
         }
-    }
 
-    private function paidWithGiftCards(Order $order): int
-    {
-        if (null !== $order->getId()) {
-            $debited = GiftCardOrderQuery::create()->filterByOrderId($order->getId())->find();
+        $debited = 0;
 
-            if (0 < \count($debited)) {
-                $cents = 0;
-                /** @var GiftCardOrder $giftCardOrder */
-                foreach ($debited as $giftCardOrder) {
-                    $cents += GiftCardAmount::cents($giftCardOrder->getSpendAmount());
-                }
+        foreach (GiftCardOrderQuery::create()->filterByOrderId($orderId)->filterBySpent()->find() as $giftCardOrder) {
+            $spendAmount = (string) ($giftCardOrder->getSpendAmount() ?? '0');
 
-                return $cents;
+            // A negative row is not money that was debited: it must not make ORDER_PAY_GET_TOTAL fail.
+            if (str_starts_with(trim($spendAmount), '-')) {
+                Tlog::getInstance()->warning(\sprintf('TheliaGiftCard: gift_card_order %d has a negative spend_amount, ignored in the total of the order.', $giftCardOrder->getId()));
+
+                continue;
             }
+
+            $debited += GiftCardAmount::exactCents($spendAmount);
         }
 
-        if (null === $order->getCartId()) {
-            return 0;
+        if ($debited <= 0) {
+            return;
         }
 
-        $cents = 0;
-        foreach (GiftCardCartQuery::create()->filterByCartId($order->getCartId())->find() as $giftCardCart) {
-            $cents += GiftCardAmount::cents($giftCardCart->getSpendAmount());
-        }
+        $total = GiftCardAmount::cents($event->getTotal());
 
-        return $cents;
+        $event->setTotal(GiftCardAmount::leftToPay($total, $debited) / 100);
     }
 }

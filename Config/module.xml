@@ -14,7 +14,7 @@
         <language>fr_FR</language>
         <language>de_DE</language>
     </languages>
-    <version>3.2.8</version>
+    <version>3.3.0</version>
     <authors>
         <author>
             <name>Bertrand Tourlonias</name>
@@ -22,7 +22,7 @@
         </author>
     </authors>
     <type>payment</type>
-    <thelia>3.0.0</thelia>
+    <thelia>3.3.0</thelia>
     <stability>prod</stability>
     <mandatory>0</mandatory>
     <hidden>0</hidden>

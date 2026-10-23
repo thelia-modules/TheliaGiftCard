@@ -13,6 +13,11 @@ namespace TheliaGiftCard\Exception;
  */
 final class GiftCardSpendRefusedException extends \RuntimeException
 {
+    /**
+     * The `code` of the refusal of a code typed by the buyer: the one the buyer is told is wrong.
+     */
+    public const int CODE_NOT_USABLE = 1;
+
     public static function invalidAmount(): self
     {
         return new self('The amount to spend is not a number.');
@@ -26,5 +31,14 @@ final class GiftCardSpendRefusedException extends \RuntimeException
     public static function cardNotSpendable(): self
     {
         return new self('One of the selected gift cards cannot be spent by this customer.');
+    }
+
+    /**
+     * Whatever is wrong with a code typed at the payment step, the buyer is told the same thing:
+     * a precise reason would tell someone guessing codes which ones exist.
+     */
+    public static function codeNotUsable(): self
+    {
+        return new self('This code cannot be used on this order.', self::CODE_NOT_USABLE);
     }
 }

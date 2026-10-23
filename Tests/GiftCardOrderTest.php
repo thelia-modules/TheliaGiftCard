@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace TheliaGiftCard\Tests;
 
+use Propel\Runtime\Propel;
 use Thelia\Core\Event\Order\OrderEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Model\ConfigQuery;
@@ -20,8 +21,10 @@ use TheliaGiftCard\Model\GiftCard;
 use TheliaGiftCard\Model\GiftCardOrder;
 use TheliaGiftCard\Model\GiftCardOrderQuery;
 use TheliaGiftCard\Model\GiftCardQuery;
+use TheliaGiftCard\Model\Map\GiftCardTableMap;
 use TheliaGiftCard\Service\GiftCardCodeGenerator;
 use TheliaGiftCard\Service\GiftCardGenerateService;
+use TheliaGiftCard\Service\GiftCardPaymentService;
 use TheliaGiftCard\TheliaGiftCard;
 
 /**
@@ -100,7 +103,7 @@ final class GiftCardOrderTest extends GiftCardTestCase
         $order = $this->createFixtureFactory()->order(null, ['statusCode' => OrderStatus::CODE_SENT]);
         $giftCard = $this->giftCard(['orderId' => $order->getId()]);
 
-        (new OrderAfterPayListener(static::getContainer()->get('request_stack')))->onOrderCancelGiftCard(new OrderEvent($order));
+        $this->orderAfterPayListener()->onOrderCancelGiftCard(new OrderEvent($order));
 
         self::assertSame(1, $this->statusOf($giftCard));
     }
@@ -163,7 +166,40 @@ final class GiftCardOrderTest extends GiftCardTestCase
         $this->cancel($order);
 
         self::assertSame('17.500001', GiftCardQuery::create()->findPk($giftCard->getId())?->getSpendAmount());
-        self::assertSame(0, GiftCardOrderQuery::create()->filterByOrderId($order->getId())->count());
+        self::assertSame(0, GiftCardOrderQuery::create()->filterByOrderId($order->getId())->filterByStatus(GiftCardPaymentService::STATUS_SPENT)->count());
+        self::assertSame(1, GiftCardOrderQuery::create()->filterByOrderId($order->getId())->filterByStatus(GiftCardPaymentService::STATUS_GIVEN_BACK)->count(), 'The row stays, marked given back.');
+    }
+
+    public function testTheListenerAfterPaymentIgnoresRowsGivenBack(): void
+    {
+        $order = $this->createFixtureFactory()->order(null, ['statusCode' => OrderStatus::CODE_PAID, 'postage' => 5]);
+        $giftCard = $this->giftCard(['amount' => '50']);
+        (new GiftCardOrder())->setGiftCardId($giftCard->getId())->setOrderId($order->getId())->setSpendAmount('12.5')->setInitialPostage('9')->setStatus(GiftCardPaymentService::STATUS_GIVEN_BACK)->save();
+
+        $event = new OrderEvent($order);
+        $event->setPlacedOrder($order);
+        $this->orderAfterPayListener()->onOrderAfterPayGiftCard($event);
+
+        self::assertSame(5.0, (float) $order->getPostage(), 'The postage of a row given back is not put back on the order.');
+    }
+
+    public function testTheCreditOfACancelledOrderNeverRollsBackTheTransactionOfTheCaller(): void
+    {
+        $order = $this->createFixtureFactory()->order(null, ['statusCode' => OrderStatus::CODE_PAID]);
+        // Credited back, this card leaves the range of the column: the write fails, as any write of the
+        // credit may (deadlock, lost connection).
+        $giftCard = $this->giftCard(['amount' => '50', 'spendAmount' => '-9999999999.999999']);
+        (new GiftCardOrder())->setGiftCardId($giftCard->getId())->setOrderId($order->getId())->setSpendAmount('5')->setInitialPostage('0')->save();
+        $connection = Propel::getWriteConnection(GiftCardTableMap::DATABASE_NAME);
+        self::assertTrue($connection->inTransaction(), 'The test runs inside a transaction, like the core does.');
+
+        try {
+            $this->cancel($order);
+            self::fail('The credit that cannot be written must fail loudly.');
+        } catch (\PDOException) {
+        }
+
+        self::assertTrue($connection->isCommitable(), 'The transaction of the caller is still the caller\'s to end: the listener rolled nothing back.');
     }
 
     public function testTheCancellationGoesThroughTheOrderStatusEventOfTheCore(): void
@@ -205,12 +241,20 @@ final class GiftCardOrderTest extends GiftCardTestCase
         $order->setStatusId($status->getId())->save();
         $order->setOrderStatus($status);
 
-        (new OrderAfterPayListener(static::getContainer()->get('request_stack')))->onOrderCancelGiftCard(new OrderEvent($order));
+        $this->orderAfterPayListener()->onOrderCancelGiftCard(new OrderEvent($order));
     }
 
     private function cancel(Order $order): void
     {
         $this->moveTo($order, OrderStatus::CODE_CANCELED);
+    }
+
+    private function orderAfterPayListener(): OrderAfterPayListener
+    {
+        $listener = static::getContainer()->get(OrderAfterPayListener::class);
+        self::assertInstanceOf(OrderAfterPayListener::class, $listener);
+
+        return $listener;
     }
 
     private function generator(): GiftCardGenerateService

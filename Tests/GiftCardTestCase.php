@@ -25,16 +25,17 @@ use TheliaGiftCard\Model\GiftCard;
 use TheliaGiftCard\TheliaGiftCard;
 
 /**
- * Runs on a disposable database whose name ends with `_test` (`php bin/test-prepare`), never on
- * the shop's: each test is rolled back, but a mistake on the target would still reach real cards.
+ * Runs on a disposable database (`php bin/test-prepare`): its name ends with `_test`, or is the `test`,
+ * `test_2`… of the Thelia monorepo. Never the shop's: each test is rolled back, but a mistake on the
+ * target would still reach real cards.
  */
 abstract class GiftCardTestCase extends IntegrationTestCase
 {
     protected function setUp(): void
     {
         $databaseName = $_SERVER['DATABASE_NAME'] ?? getenv('DATABASE_NAME');
-        if (!\is_string($databaseName) || !str_ends_with($databaseName, '_test')) {
-            self::fail(\sprintf('Refusing to run on the database "%s": use a *_test database.', (string) $databaseName));
+        if (!\is_string($databaseName) || 1 !== preg_match('/(?:_test|^test(?:_\d+)?)$/', $databaseName)) {
+            self::fail(\sprintf('Refusing to run on the database "%s": use a *_test database (or test, test_2… of the Thelia monorepo).', (string) $databaseName));
         }
 
         parent::setUp();

@@ -37,6 +37,17 @@ class GiftCardService
     ) {
     }
 
+    /**
+     * What the cards put on the cart pay, as the decimal string the payment composition of the core
+     * reads, "0" when there is none.
+     */
+    public function getAmountAppliedToCart(Cart $cart): string
+    {
+        $cents = $this->giftCardCartSpending->amountOnCart($cart);
+
+        return $cents > 0 ? GiftCardAmount::decimal($cents) : '0';
+    }
+
     public function getAvailableGiftCardAmount(GiftCard $giftCard): float
     {
         return $giftCard->getAmount() - $giftCard->getSpendAmount();

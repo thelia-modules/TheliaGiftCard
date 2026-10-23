@@ -25,6 +25,7 @@ use TheliaGiftCard\Model\GiftCardInfoCartQuery;
 use TheliaGiftCard\Model\GiftCardOrder;
 use TheliaGiftCard\Model\GiftCardQuery;
 use TheliaGiftCard\Service\GiftCardListInfoProvider;
+use TheliaGiftCard\Service\GiftCardPaymentService;
 
 /**
  * The back-office screens of the module: rights, card list data, escaping.
@@ -144,6 +145,21 @@ final class GiftCardBackOfficeTest extends GiftCardTestCase
         self::assertStringContainsString('Mit Geschenkkarten bezahlt insgesamt', $orderBlock);
         self::assertStringContainsString('E-Mail des Empfängers', $page);
         self::assertStringContainsString('<th>Bestellstatus</th>', $page);
+    }
+
+    public function testARowGivenBackIsShownAsSpentNeitherOnTheOrderNorInTheHistoryOfTheCard(): void
+    {
+        $fixtures = $this->createFixtureFactory();
+        $order = $fixtures->order($fixtures->customer($fixtures->customerTitle()));
+        $giftCard = $this->giftCard();
+        (new GiftCardOrder())->setGiftCardId($giftCard->getId())->setOrderId($order->getId())->setSpendAmount('12.5')->setInitialPostage('0')->setStatus(GiftCardPaymentService::STATUS_GIVEN_BACK)->save();
+
+        [, , $orderBlock] = $this->renderConfigurationScreen('fr_FR', $order->getId());
+        $response = $this->asAdmin($fixtures->admin(), 'POST', '/admin/module/theliagiftcard/show/'.$giftCard->getCode());
+        $card = json_decode((string) $response->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+
+        self::assertStringNotContainsString($giftCard->getCode(), $orderBlock);
+        self::assertSame([], $card['HISTORY']);
     }
 
     public function testTheEditWindowHasTheFieldsTheScriptFillsWithTheCard(): void
