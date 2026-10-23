@@ -10,10 +10,15 @@ declare(strict_types=1);
 namespace TheliaGiftCard\Hook\Theme;
 
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Routing\Exception\ExceptionInterface as RoutingException;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Thelia\Domain\Checkout\Enum\CheckoutDisplayMode;
 use Thelia\Core\Hook\Theme\ThemeHookInterface;
 use Thelia\Core\HttpFoundation\Session\Session;
 use Thelia\Model\CategoryQuery;
+use Thelia\Model\ConfigQuery;
 use Thelia\Model\Customer;
 use Thelia\Model\LangQuery;
 use Thelia\Tools\URL;
@@ -36,6 +41,8 @@ final readonly class GiftCardThemeHook implements ThemeHookInterface
 
     private const PRODUCT_TEMPLATE = '@TheliaGiftCardModule/frontOffice/flexy/TheliaGiftCard/product-additional-gift-card.html.twig';
 
+    private const PAYMENT_STEP_ROUTE = 'checkout_payment';
+
     private const CHECKOUT_SUMMARY_TEMPLATE = '@TheliaGiftCardModule/frontOffice/flexy/TheliaGiftCard/checkout-summary-gift-card.html.twig';
 
     public function __construct(
@@ -43,6 +50,7 @@ final readonly class GiftCardThemeHook implements ThemeHookInterface
         private RequestStack $requestStack,
         private EventDispatcherInterface $dispatcher,
         private GiftCardCartSpending $cartSpending,
+        private UrlGeneratorInterface $urlGenerator,
     ) {
     }
 
@@ -64,6 +72,9 @@ final readonly class GiftCardThemeHook implements ThemeHookInterface
     /**
      * Under the total of the checkout summary: the form that puts the customer's cards on the
      * cart, and what they pay and what is left to pay, the amount the payment module asks for.
+     *
+     * The form is left out on the payment step, where the `TheliaGiftCard:PaymentPart` component of the
+     * `checkout.payment.parts` hook is the one entry: the lines stay, the form is drawn on the other steps.
      *
      * Only for a signed-in customer who has a card to spend or already put one on the cart, once
      * a carrier is chosen: the cards pay the postage too, so the total is known only then.
@@ -96,9 +107,42 @@ final readonly class GiftCardThemeHook implements ThemeHookInterface
 
         return $this->twig->render(self::CHECKOUT_SUMMARY_TEMPLATE, [
             'cards' => $cards,
+            'withForm' => !$this->isOnPaymentStep($request),
             'paidWithCards' => GiftCardAmount::decimal(GiftCardAmount::paidByCards($cartTotal, $paidWithCards)),
             'leftToPay' => GiftCardAmount::decimal(GiftCardAmount::leftToPay($cartTotal, $paidWithCards)),
         ]);
+    }
+
+    /**
+     * The summary is a live component: drawn with the page it sits on, then redrawn by the /_components
+     * endpoint, where the route of the request is the endpoint and the page is in the Referer. On a
+     * one-page checkout the payment is a section of the screen served by the cart route.
+     */
+    private function isOnPaymentStep(?Request $request): bool
+    {
+        if (CheckoutDisplayMode::OnePage === CheckoutDisplayMode::fromStoredValue(ConfigQuery::getCheckoutDisplayMode())) {
+            return true;
+        }
+
+        if (null === $request) {
+            return false;
+        }
+
+        if (self::PAYMENT_STEP_ROUTE === $request->attributes->get('_route')) {
+            return true;
+        }
+
+        $referer = (string) $request->headers->get('Referer', '');
+
+        if (!$request->attributes->has('_live_component') || '' === $referer) {
+            return false;
+        }
+
+        try {
+            return $this->urlGenerator->generate(self::PAYMENT_STEP_ROUTE) === parse_url($referer, \PHP_URL_PATH);
+        } catch (RoutingException) {
+            return false;
+        }
     }
 
     /**

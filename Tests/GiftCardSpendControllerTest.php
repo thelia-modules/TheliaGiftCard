@@ -14,6 +14,7 @@ use Thelia\Core\HttpFoundation\Session\Session;
 use Thelia\Domain\Payment\OrderPaymentComposer;
 use Thelia\Model\Cart;
 use Thelia\Model\CartQuery;
+use Thelia\Model\ConfigQuery;
 use Thelia\Model\Currency;
 use Thelia\Model\Customer;
 use Thelia\Model\GiftWrapping;
@@ -89,11 +90,67 @@ final class GiftCardSpendControllerTest extends GiftCardTestCase
         $giftCard = $this->giftCard(['amount' => '50', 'beneficiaryCustomerId' => $customer->getId()]);
         $this->postSpend($customer, $cart, [(string) $giftCard->getId()], '30');
 
-        $html = $this->renderSummaryHook($customer, $cart);
+        $html = $this->renderSummaryHook($customer, $cart, ['_route' => 'checkout_delivery']);
 
         self::assertMatchesRegularExpression('/data-gift-card-paid>.*?30[.,]00/s', $html);
         self::assertMatchesRegularExpression('/data-gift-card-left-to-pay>.*?70[.,]00/s', $html);
         self::assertStringContainsString('action="/gift-card/spend"', $html);
+    }
+
+    /**
+     * The payment step has one entry, the TheliaGiftCard:PaymentPart component: the summary keeps its
+     * lines and leaves the form out. The other steps keep the form.
+     */
+    public function testThePaymentStepSummaryKeepsTheLinesAndDropsTheForm(): void
+    {
+        [$customer, $cart] = $this->cartOf(90.0, '10');
+        $giftCard = $this->giftCard(['amount' => '50', 'beneficiaryCustomerId' => $customer->getId()]);
+        $this->postSpend($customer, $cart, [(string) $giftCard->getId()], '30');
+
+        $html = $this->renderSummaryHook($customer, $cart, ['_route' => 'checkout_payment']);
+
+        self::assertMatchesRegularExpression('/data-gift-card-paid>.*?30[.,]00/s', $html);
+        self::assertMatchesRegularExpression('/data-gift-card-left-to-pay>.*?70[.,]00/s', $html);
+        self::assertStringNotContainsString('data-gift-card-spend-form', $html);
+        self::assertStringNotContainsString('/gift-card/spend', $html);
+
+        $html = $this->renderSummaryHook($customer, $cart, ['_route' => 'checkout_cart']);
+
+        self::assertStringContainsString('data-gift-card-spend-form', $html);
+    }
+
+    /**
+     * The summary redraws itself on the live endpoint, where the page it sits on is the Referer.
+     */
+    public function testTheSummaryRedrawnOnThePaymentStepDropsTheFormToo(): void
+    {
+        [$customer, $cart] = $this->cartOf(90.0, '10');
+        $giftCard = $this->giftCard(['amount' => '50', 'beneficiaryCustomerId' => $customer->getId()]);
+        $this->postSpend($customer, $cart, [(string) $giftCard->getId()], '30');
+
+        $live = ['_route' => 'ux_live_component', '_live_component' => 'Organisms:Summary:Checkout'];
+
+        $html = $this->renderSummaryHook($customer, $cart, $live, ['Referer' => 'https://shop.test/checkout/payment?x=1']);
+
+        self::assertStringContainsString('data-gift-card-paid', $html);
+        self::assertStringNotContainsString('data-gift-card-spend-form', $html);
+
+        $html = $this->renderSummaryHook($customer, $cart, $live, ['Referer' => 'https://shop.test/checkout/delivery']);
+
+        self::assertStringContainsString('data-gift-card-spend-form', $html);
+    }
+
+    public function testTheSummaryOfAOnePageCheckoutDropsTheForm(): void
+    {
+        [$customer, $cart] = $this->cartOf(90.0, '10');
+        $giftCard = $this->giftCard(['amount' => '50', 'beneficiaryCustomerId' => $customer->getId()]);
+        $this->postSpend($customer, $cart, [(string) $giftCard->getId()], '30');
+        ConfigQuery::write('checkout_display_mode', 'one_page');
+
+        $html = $this->renderSummaryHook($customer, $cart, ['_route' => 'checkout_cart']);
+
+        self::assertStringContainsString('data-gift-card-paid', $html);
+        self::assertStringNotContainsString('data-gift-card-spend-form', $html);
     }
 
     /**
@@ -197,7 +254,11 @@ final class GiftCardSpendControllerTest extends GiftCardTestCase
         return $this->handleAsMainRequest($request);
     }
 
-    private function renderSummaryHook(Customer $customer, Cart $cart): string
+    /**
+     * @param array<string, string> $attributes
+     * @param array<string, string> $headers
+     */
+    private function renderSummaryHook(Customer $customer, Cart $cart, array $attributes = [], array $headers = []): string
     {
         $session = $this->sessionOf($customer, $cart);
         // A shop request always has them: the amounts are written in the currency of the session.
@@ -205,6 +266,8 @@ final class GiftCardSpendControllerTest extends GiftCardTestCase
         $session->setLang(Lang::getDefaultLanguage());
 
         $request = Request::create('/checkout/payment');
+        $request->attributes->add($attributes);
+        $request->headers->add($headers);
         $request->setSession($session);
 
         $requestStack = $this->requestStack();

@@ -49,11 +49,14 @@ Requires Thelia 3.3.0: the module is an instant payment means of the core (`Inst
   Each action is written on the cart by the module (`GiftCardCartSelection`), then the component emits
   `PAYMENT_PARTS_CHANGED` for the step to read the payment composition again. The module never writes the payment module
   of the cart: the theme does. The component is built from Flexy's own components and keys; another theme draws its own.
-- The entry of 3.2.8 stays: `POST /gift-card/spend` and the form and lines of the `checkout.summary.bottom` hook write the
-  same cards on the cart, which the part is read from. The summary's "paid by gift card" and "left to pay" are the part
-  the core composes for the order and the balance it leaves to the provider, the gift wrapping included (a test compares
-  them with `OrderPaymentComposer`). The summary reads the cards only: a part of another instant means is not in its
-  "left to pay".
+- Two entries write the same cards on the cart, which the part is read from: the `TheliaGiftCard:PaymentPart`
+  component on the payment step, and the form of the `checkout.summary.bottom` hook (`POST /gift-card/spend`) on the
+  other steps where the summary is drawn. On the payment step, and on a one-page checkout where the payment is a section
+  of the screen, the summary keeps its "paid by gift card" and "left to pay" lines and no longer draws the form: the
+  component is the one entry. The step is read from the route (`checkout_payment`), or from the Referer when the summary
+  redraws itself on the live endpoint. The lines are the part the core composes for the order and the balance it leaves
+  to the provider, the gift wrapping included (a test compares them with `OrderPaymentComposer`). The summary reads the
+  cards only: a part of another instant means is not in its "left to pay".
 - The part is spent from the cards of the cart the order comes from, in the order they were put on it, each for what
   was put on it at most. A card disabled, expired or spent elsewhere since refuses the part, and so do cards that no
   longer cover it.

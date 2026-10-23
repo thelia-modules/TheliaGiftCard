@@ -1,5 +1,6 @@
 {# Gift cards at checkout: what the cards put on the cart pay, what is left to pay, and the form
-   that puts them on the cart. Rendered by TheliaGiftCard\Hook\Theme\GiftCardThemeHook on the
+   that puts them on the cart (`withForm`: left out on the payment step, where the
+   `TheliaGiftCard:PaymentPart` component of the `checkout.payment.parts` hook is the one entry). Rendered by TheliaGiftCard\Hook\Theme\GiftCardThemeHook on the
    `checkout.summary.bottom` theme hook point, under the total of the checkout summary.
 
    "Left to pay" is the balance the core leaves to the payment provider when it composes the
@@ -19,7 +20,7 @@
     </div>
 {% endif %}
 
-{% if cards|length %}
+{% if withForm and cards|length %}
     {% set form = getForm('consume_gift_card') %}
 
     {{ form_start(form, {
