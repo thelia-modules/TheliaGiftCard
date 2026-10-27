@@ -29,6 +29,11 @@ picked in the card list for a download); the templates receive it as `gift_card_
 
 ## Changes
 
+### 3.4.0
+
+- The gift card list of the configuration page is rendered by the server like the order list of the back-office (search, type and status chips, sortable headers, pages of 25), and no longer loads jQuery, DataTables, select2, lodash, flatpickr or any CDN. The search and the type filter apply, which they did not before. See `CHANGELOG.md`.
+- A shop that overrides `datatable.js.html.twig` or `gift-card-config.html.twig` must follow: the script template is `gift-card-config-js.html.twig`, and the list is built from `rows`, `filters`, `current_page`, `pages` and `total`.
+
 ### 3.3.0
 
 Requires Thelia 3.3.0: the module is an instant payment means of the core (`InstantPaymentModuleInterface`).

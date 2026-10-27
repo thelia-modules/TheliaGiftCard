@@ -6,27 +6,33 @@
 namespace TheliaGiftCard\Hook;
 
 use Propel\Runtime\Exception\PropelException;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Event\Hook\HookRenderEvent;
 use Thelia\Core\Form\TheliaFormFactory;
 use Thelia\Core\Hook\BaseHook;
 use Thelia\Core\Template\Parser\ParserResolver;
-use Thelia\Core\Translation\Translator;
+use TheliaGiftCard\Dto\GiftCardListCriteria;
 use TheliaGiftCard\Form\Config\GiftCardConfigForm;
 use TheliaGiftCard\Form\Config\ManualyCreateGiftCard;
 use TheliaGiftCard\Form\Config\ManualyEditGiftCard;
 use TheliaGiftCard\Form\GiftCardCustomerEmailForm;
-use TheliaGiftCard\Model\Map\GiftCardTableMap;
+use TheliaGiftCard\Presenter\GiftCardListFilterPresenter;
+use TheliaGiftCard\Presenter\GiftCardListRowPresenter;
 use TheliaGiftCard\Service\GiftCardEmailService;
 use TheliaGiftCard\Service\GiftCardListInfoProvider;
-use TheliaGiftCard\TheliaGiftCard;
+use TheliaGiftCard\Service\GiftCardListService;
 
 class HookConfigurationManager extends BaseHook
 {
     public function __construct(
         private readonly TheliaFormFactory $formFactory,
         private readonly GiftCardEmailService $giftCardEmailService,
+        private readonly GiftCardListService $listService,
         private readonly GiftCardListInfoProvider $listInfoProvider,
+        private readonly GiftCardListRowPresenter $rowPresenter,
+        private readonly GiftCardListFilterPresenter $filterPresenter,
+        private readonly RequestStack $requestStack,
         ?EventDispatcherInterface $dispatcher = null,
         ?ParserResolver $parserResolver = null,
     ) {
@@ -50,6 +56,10 @@ class HookConfigurationManager extends BaseHook
      */
     public function onConfiguration(HookRenderEvent $event): void
     {
+        $request = $this->requestStack->getCurrentRequest();
+        $criteria = GiftCardListCriteria::fromQuery($request?->query->all() ?? []);
+        $page = $this->listService->find($criteria);
+
         $configForm = $this->formFactory->createForm(GiftCardConfigForm::getName());
         $createForm = $this->formFactory->createForm(ManualyCreateGiftCard::getName());
         $editForm = $this->formFactory->createForm(ManualyEditGiftCard::getName());
@@ -59,7 +69,15 @@ class HookConfigurationManager extends BaseHook
             $this->render(
                 'TheliaGiftCard/gift-card-config.html.twig',
                 [
-                    'columnsDefinitionTransaction' => $this->defineColumnsDefinition(),
+                    'rows' => $this->rowPresenter->presentAll(
+                        $page->cards,
+                        $this->listInfoProvider->build($page->cards),
+                        $request?->getLocale() ?? 'en_US',
+                    ),
+                    'filters' => $this->filterPresenter->present($criteria),
+                    'current_page' => $page->page,
+                    'pages' => $page->lastPage,
+                    'total' => $page->total,
                     'config_form' => $configForm->createView()->getView(),
                     'create_form' => $createForm->createView()->getView(),
                     'edit_form' => $editForm->createView()->getView(),
@@ -71,126 +89,10 @@ class HookConfigurationManager extends BaseHook
         );
     }
 
-    /**
-     * @throws PropelException
-     */
     public function onProductEditJs(HookRenderEvent $event): void
     {
         $event->add(
-            $this->render(
-                'TheliaGiftCard/datatable.js.html.twig',
-                [
-                    'all_info' => $this->listInfoProvider->build(),
-                    'columnsDefinitionTransaction' => $this->defineColumnsDefinition(),
-                ]
-            )
+            $this->render('TheliaGiftCard/gift-card-config-js.html.twig')
         );
-    }
-
-    protected function defineColumnsDefinition(): array
-    {
-        return HookConfigurationManager::getdefineColumnsDefinition();
-    }
-
-    public static function getdefineColumnsDefinition(): array
-    {
-        $i = -1;
-
-        return [
-            [
-                'name' => 'id',
-                'targets' => ++$i,
-                'orm' => GiftCardTableMap::COL_ID,
-                'title' => Translator::getInstance()->trans('ID', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => false,
-            ],
-            [
-                'name' => 'orderRef',
-                'targets' => ++$i,
-                'orm' => null,
-                'title' => Translator::getInstance()->trans('order', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => true,
-            ],
-            [
-                'name' => 'code',
-                'targets' => ++$i,
-                'orm' => GiftCardTableMap::COL_CODE,
-                'title' => Translator::getInstance()->trans('code', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => true,
-            ],
-            [
-                'name' => 'sponsor_customer_id',
-                'targets' => ++$i,
-                'orm' => GiftCardTableMap::COL_SPONSOR_CUSTOMER_ID,
-                'title' => Translator::getInstance()->trans('sponsor_customer', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => true,
-            ],
-            [
-                'name' => 'beneficiary_customer_id',
-                'targets' => ++$i,
-                'orm' => GiftCardTableMap::COL_BENEFICIARY_CUSTOMER_ID,
-                'title' => Translator::getInstance()->trans('beneficiary_customer', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => true,
-            ],
-            [
-                'name' => 'amount',
-                'targets' => ++$i,
-                'orm' => GiftCardTableMap::COL_AMOUNT,
-                'title' => Translator::getInstance()->trans('amount', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => true,
-            ],
-            [
-                'name' => 'spend_amount',
-                'targets' => ++$i,
-                'orm' => GiftCardTableMap::COL_SPEND_AMOUNT,
-                'title' => Translator::getInstance()->trans('spend_amount', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => true,
-            ],
-            [
-                'name' => 'expiration_date',
-                'targets' => ++$i,
-                'orm' => GiftCardTableMap::COL_EXPIRATION_DATE,
-                'title' => Translator::getInstance()->trans('expiration_date', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => false,
-            ],
-            [
-                'name' => 'created_at',
-                'targets' => ++$i,
-                'orm' => GiftCardTableMap::COL_CREATED_AT,
-                'title' => Translator::getInstance()->trans('created_at', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => false,
-            ],
-            [
-                'name' => 'status',
-                'targets' => ++$i,
-                'orm' => GiftCardTableMap::COL_STATUS,
-                'title' => Translator::getInstance()->trans('status', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => true,
-            ],
-            [
-                'name' => 'pdf',
-                'targets' => ++$i,
-                'orm' => null,
-                'title' => Translator::getInstance()->trans('pdf', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => false,
-                'orderable' => false,
-            ],
-            [
-                'name' => 'action',
-                'targets' => ++$i,
-                'orm' => null,
-                'title' => Translator::getInstance()->trans('action', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => false,
-                'orderable' => false,
-            ],
-            [
-                'name' => 'edit',
-                'targets' => ++$i,
-                'orm' => null,
-                'title' => Translator::getInstance()->trans('edit', [], TheliaGiftCard::DOMAIN_NAME),
-                'searchable' => false,
-                'orderable' => false,
-            ],
-        ];
     }
 }

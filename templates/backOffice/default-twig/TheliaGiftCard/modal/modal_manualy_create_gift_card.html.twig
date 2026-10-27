@@ -50,6 +50,9 @@
                             {{ form_errors(form.amount) }}
                         </div>
                     </div>
+                    {# The e-mail of the automatic sending only serves a card bought in the shop: the card of an
+                       administrator is sent from the list. #}
+                    {% do form.beneficiary_email.setRendered %}
                     {{ form_rest(form) }}
                 </div>
                 <div class="modal-footer">

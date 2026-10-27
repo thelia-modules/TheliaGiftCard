@@ -3,6 +3,8 @@ return array(
     'FORM_ADD_AMOUNT_CARD_GIFT' => 'Desired amount',
     'FORM_ADD_AMOUNT_GC' => 'Amount',
     'FORM_ADD_BENEFICIARY_MESSAGE' => 'Message',
+    'FORM_ADD_BENEFICIARY_ADDRESS' => 'Recipient e-mail',
+    'FORM_ADD_BENEFICIARY_EMAIL' => 'Recipient e-mail for the automatic sending',
     'FORM_ADD_BENEFICIARY_NAME' => 'Beneficiary Name',
     'FORM_ADD_CODE_CARD_GIFT' => 'Enter your code here',
     'FORM_ADD_EXPIRATION_GC' => 'Expiration date',
@@ -26,4 +28,7 @@ return array(
     'FORM_EDIT_AMOUNT_GC' => 'Amount',
     'FORM_EDIT_EXPIRATION_GC' => 'Expiration date',
     'FORM_EDIT_BENEFICIARY_ADDRESS' => 'Recipient e-mail',
+    'FORM_ADD_EMAIL_STATUS_ID' => 'Order status',
+    'FORM_ADD_EMAIL_SUBJECT' => 'E-mail subject',
+    'FORM_ADD_EMAIL_TEXT' => 'E-mail text',
 );

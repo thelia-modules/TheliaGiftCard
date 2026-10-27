@@ -7,8 +7,10 @@
 namespace TheliaGiftCard\Form\Config;
 
 use Symfony\Component\Form\Extension\Core\Type\DateType;
+use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
-use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Validator\Constraints\Email;
+use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Thelia\Form\BaseForm;
 use TheliaGiftCard\TheliaGiftCard;
@@ -63,7 +65,7 @@ class ManualyEditGiftCard extends BaseForm
                 ])
             ->add(
                 'beneficiary_address',
-                TextType::class,
+                EmailType::class,
                 [
                     'label' => $this->translator->trans('FORM_EDIT_BENEFICIARY_ADDRESS', [], TheliaGiftCard::DOMAIN_NAME),
                     'label_attr' => [
@@ -71,6 +73,7 @@ class ManualyEditGiftCard extends BaseForm
                     ],
                     // A card created without a recipient e-mail keeps none: the controller only saves a given address.
                     'required' => false,
+                    'constraints' => [new Email(), new Length(max: 500)],
                 ]);
     }
 }

@@ -8,77 +8,98 @@ declare(strict_types=1);
 namespace TheliaGiftCard\Service;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use Thelia\Model\AddressQuery;
 use Thelia\Model\CustomerQuery;
 use Thelia\Model\LangQuery;
+use Thelia\Model\Map\AddressTableMap;
+use Thelia\Model\Map\CountryTableMap;
 use Thelia\Model\Map\CustomerTableMap;
 use Thelia\Model\Map\OrderTableMap;
 use Thelia\Model\OrderQuery;
-use TheliaGiftCard\Model\GiftCardQuery;
-use TheliaGiftCard\Model\Map\GiftCardTableMap;
+use TheliaGiftCard\Model\GiftCard;
 
 /**
- * The names and references the back-office card list shows next to the ids: one query per
- * table, whatever the number of cards.
+ * The people and references the back-office card list shows next to the ids of the cards of a page:
+ * one query per table, whatever the number of cards.
  */
 final readonly class GiftCardListInfoProvider
 {
     /**
-     * @return array{orders: array<int, string>, sponsor_customers: array<int, string>, beneficiary_customers: array<int, string>, languages: list<array{locale: string, code: string, title: string}>}
+     * @param list<GiftCard> $giftCards the cards of the page
+     *
+     * @return array{orders: array<int, string>, sponsor_customers: array<int, array{name: string, email: string, country: string|null}>, beneficiary_customers: array<int, array{name: string, email: string, country: string|null}>, languages: list<array{locale: string, code: string, title: string}>}
      */
-    public function build(): array
+    public function build(array $giftCards): array
     {
-        $links = GiftCardQuery::create()
-            ->select([GiftCardTableMap::COL_ORDER_ID, GiftCardTableMap::COL_SPONSOR_CUSTOMER_ID, GiftCardTableMap::COL_BENEFICIARY_CUSTOMER_ID])
-            ->find()
-            ->toArray();
-
-        $orderIds = $this->ids($links, GiftCardTableMap::COL_ORDER_ID);
-        $sponsorIds = $this->ids($links, GiftCardTableMap::COL_SPONSOR_CUSTOMER_ID);
-        $beneficiaryIds = $this->ids($links, GiftCardTableMap::COL_BENEFICIARY_CUSTOMER_ID);
-        $customerNames = $this->customerNames(array_values(array_unique([...$sponsorIds, ...$beneficiaryIds])));
+        $orderIds = $this->ids($giftCards, static fn (GiftCard $giftCard): ?int => $giftCard->getOrderId());
+        $sponsorIds = $this->ids($giftCards, static fn (GiftCard $giftCard): ?int => $giftCard->getSponsorCustomerId());
+        $beneficiaryIds = $this->ids($giftCards, static fn (GiftCard $giftCard): ?int => $giftCard->getBeneficiaryCustomerId());
+        $customers = $this->customers(array_values(array_unique([...$sponsorIds, ...$beneficiaryIds])));
 
         return [
             'orders' => $this->orderReferences($orderIds),
-            'sponsor_customers' => array_intersect_key($customerNames, array_flip($sponsorIds)),
-            'beneficiary_customers' => array_intersect_key($customerNames, array_flip($beneficiaryIds)),
+            'sponsor_customers' => array_intersect_key($customers, array_flip($sponsorIds)),
+            'beneficiary_customers' => array_intersect_key($customers, array_flip($beneficiaryIds)),
             'languages' => $this->languages(),
         ];
     }
 
     /**
-     * @param list<array<string, mixed>> $links
+     * @param list<GiftCard>                 $giftCards
+     * @param callable(GiftCard): (int|null) $idOf
      *
      * @return list<int>
      */
-    private function ids(array $links, string $column): array
+    private function ids(array $giftCards, callable $idOf): array
     {
-        $ids = array_filter(array_map(static fn (array $link): int => (int) ($link[$column] ?? 0), $links));
+        $ids = array_filter(array_map($idOf, $giftCards));
 
         return array_values(array_unique($ids));
     }
 
     /**
+     * The name and email of each customer, and the country of their default address for the flag the
+     * order list shows before a name.
+     *
      * @param list<int> $customerIds
      *
-     * @return array<int, string>
+     * @return array<int, array{name: string, email: string, country: string|null}>
      */
-    private function customerNames(array $customerIds): array
+    private function customers(array $customerIds): array
     {
         if ([] === $customerIds) {
             return [];
         }
 
-        $names = [];
+        $countries = [];
+        $addresses = AddressQuery::create()
+            ->filterByCustomerId($customerIds, Criteria::IN)
+            ->filterByIsDefault(1)
+            ->useCountryQuery()
+            ->endUse()
+            ->select([AddressTableMap::COL_CUSTOMER_ID, CountryTableMap::COL_ISOALPHA2])
+            ->find();
+
+        foreach ($addresses as $address) {
+            $countries[(int) $address[AddressTableMap::COL_CUSTOMER_ID]] = (string) $address[CountryTableMap::COL_ISOALPHA2];
+        }
+
+        $customers = [];
         $rows = CustomerQuery::create()
             ->filterById($customerIds, Criteria::IN)
-            ->select([CustomerTableMap::COL_ID, CustomerTableMap::COL_FIRSTNAME, CustomerTableMap::COL_LASTNAME])
+            ->select([CustomerTableMap::COL_ID, CustomerTableMap::COL_FIRSTNAME, CustomerTableMap::COL_LASTNAME, CustomerTableMap::COL_EMAIL])
             ->find();
 
         foreach ($rows as $row) {
-            $names[(int) $row[CustomerTableMap::COL_ID]] = trim($row[CustomerTableMap::COL_FIRSTNAME].' '.$row[CustomerTableMap::COL_LASTNAME]);
+            $id = (int) $row[CustomerTableMap::COL_ID];
+            $customers[$id] = [
+                'name' => trim($row[CustomerTableMap::COL_FIRSTNAME].' '.$row[CustomerTableMap::COL_LASTNAME]),
+                'email' => (string) $row[CustomerTableMap::COL_EMAIL],
+                'country' => $countries[$id] ?? null,
+            ];
         }
 
-        return $names;
+        return $customers;
     }
 
     /**

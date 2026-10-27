@@ -1,0 +1,184 @@
+{# module.config-js hook fragment: what the card list does in the browser, in plain JavaScript (the
+   default-twig back-office ships no jQuery, and the list itself is rendered by the server). #}
+<script>
+    (function () {
+        'use strict';
+
+        {# Activation and deactivation: a plain POST of the shared form (carrying the CSRF token and the code
+           of the card), pointed at the action of the button. The form only goes to the two actions the page
+           names: a button injected elsewhere in the page cannot send the token anywhere else. The server
+           answers with a redirect to this very page of the list. #}
+        var statusForm = document.getElementById('gift-card-status-form');
+        {# Compared as absolute addresses: Twig and the router do not write them the same way. #}
+        function absolute(address) {
+            return new URL(address, window.location.href).href;
+        }
+        var allowedActions = statusForm ? JSON.parse(statusForm.dataset.allowedActions || '[]').map(absolute) : [];
+
+        document.addEventListener('click', function (event) {
+            var button = event.target.closest('[data-gift-card-status-url]');
+            if (!button || !statusForm) {
+                return;
+            }
+
+            event.preventDefault();
+            var action = absolute(button.getAttribute('data-gift-card-status-url'));
+            if (statusForm.dataset.sent || allowedActions.indexOf(action) === -1) {
+                return;
+            }
+            statusForm.dataset.sent = '1';
+            statusForm.action = action;
+            statusForm.elements.code.value = button.getAttribute('data-code') || '';
+            statusForm.submit();
+        });
+
+        {# Coming back to the page with the back button must not leave the buttons dead. #}
+        window.addEventListener('pageshow', function () {
+            if (statusForm) {
+                delete statusForm.dataset.sent;
+            }
+        });
+
+        {# The code of the card the send window opens on. #}
+        var sendModal = document.getElementById('send_gift_card_email');
+
+        if (sendModal) {
+            sendModal.addEventListener('show.bs.modal', function (event) {
+                var code = event.relatedTarget ? event.relatedTarget.getAttribute('data-code') : '';
+                document.getElementById('giftCardCode').value = code || '';
+            });
+            sendModal.addEventListener('hidden.bs.modal', function () {
+                document.getElementById('giftCardCode').value = '';
+            });
+        }
+
+        {# The card the edit window is open on, and the request that reads it: a late answer for a card
+           opened before must not fill the window of the next one. #}
+        var editModal = document.getElementById('manualy_edit_card_gift_dialog');
+        var editedCardCode = null;
+        var editedCardRequest = null;
+
+        function forgetEditedCard() {
+            editedCardCode = null;
+            if (editedCardRequest) {
+                editedCardRequest.abort();
+                editedCardRequest = null;
+            }
+        }
+
+        function setField(id, value) {
+            var field = document.getElementById(id);
+            if (field) {
+                field.value = value === null || value === undefined ? '' : value;
+            }
+        }
+
+        {# The usage history is built with text nodes: an order reference or a status title is never read as markup. #}
+        function showHistory(logs) {
+            var body = document.getElementById('logs-body');
+            if (!body) {
+                return;
+            }
+
+            var columns = ['ORDER_REF', 'SPEND_AMOUNT', 'ORDER_STATUS', 'DATE'];
+            body.replaceChildren();
+
+            logs.forEach(function (log) {
+                var row = document.createElement('tr');
+                columns.forEach(function (column) {
+                    var cell = document.createElement('td');
+                    cell.textContent = log[column] === undefined ? '?' : String(log[column]);
+                    row.appendChild(cell);
+                });
+                body.appendChild(row);
+            });
+
+            body.closest('.table-responsive').classList.toggle('d-none', logs.length === 0);
+        }
+
+        {# What is left of the card and the message of the buyer, written as text: the message comes from
+           the shop and is never read as markup. #}
+        function showSummary(card) {
+            var spent = document.getElementById('giftCardSpent');
+            var message = document.getElementById('giftCardMessage');
+            if (spent) {
+                spent.textContent = card
+                    ? spent.dataset.label
+                        .replace('%spent%', function () { return card.spent; })
+                        .replace('%remaining%', function () { return card.remaining; })
+                    : '';
+            }
+            if (message) {
+                message.textContent = card ? (card.beneficiary_message || message.dataset.empty) : '';
+                message.classList.toggle('text-muted', !card || !card.beneficiary_message);
+            }
+        }
+
+        function showReadError(failed) {
+            var alert = document.getElementById('giftCardReadError');
+            var save = document.getElementById('giftCardSave');
+            if (alert) {
+                alert.classList.toggle('d-none', !failed);
+            }
+            if (save) {
+                save.disabled = failed;
+            }
+        }
+
+        function fillEditForm(code) {
+            forgetEditedCard();
+            editedCardCode = code;
+
+            editModal.querySelector('form').reset();
+            ['amount', 'expirationDate', 'beneficiaryAddress', 'giftCardId'].forEach(function (id) {
+                setField(id, '');
+            });
+            showHistory([]);
+            showSummary(null);
+            showReadError(false);
+
+            var controller = new AbortController();
+            editedCardRequest = controller;
+
+            fetch(editModal.dataset.cardUrl.replace('__CODE__', encodeURIComponent(code)), {
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                credentials: 'same-origin',
+                signal: controller.signal
+            }).then(function (response) {
+                return response.ok ? response.json() : null;
+            }).then(function (card) {
+                if (code !== editedCardCode) {
+                    return;
+                }
+                if (!card) {
+                    showReadError(true);
+                    return;
+                }
+                editedCardRequest = null;
+                setField('amount', card.amount);
+                setField('expirationDate', card.expiration_date);
+                setField('beneficiaryAddress', card.beneficiary_address);
+                setField('giftCardId', card.card_id);
+                showSummary(card);
+                showHistory(card.HISTORY || []);
+            }).catch(function (error) {
+                {# An aborted request is a card closed or another one opened: nothing to say. Anything else
+                   (an expired session answers its login page, which is not JSON) is said, and the window
+                   cannot be saved empty. #}
+                if (error && error.name !== 'AbortError' && code === editedCardCode) {
+                    showReadError(true);
+                }
+            });
+        }
+
+        if (editModal) {
+            editModal.addEventListener('show.bs.modal', function (event) {
+                var code = event.relatedTarget ? event.relatedTarget.getAttribute('data-code') : null;
+                if (code) {
+                    fillEditForm(code);
+                }
+            });
+            editModal.addEventListener('hide.bs.modal', forgetEditedCard);
+        }
+    })();
+</script>
