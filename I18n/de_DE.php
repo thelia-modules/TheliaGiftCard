@@ -2,8 +2,10 @@
 
 return array(
     'FORM_ADD_BENEFICIARY_MESSAGE' => 'Nachricht',
+    'FORM_ADD_BENEFICIARY_ADDRESS' => 'E-Mail des Empfängers',
+    'FORM_ADD_BENEFICIARY_EMAIL' => 'E-Mail des Empfängers für den automatischen Versand',
     'FORM_ADD_BENEFICIARY_NAME' => 'Name des Begünstigten',
-    'FORM_ADD_CODE_CARD_GIFT' => 'Enter your code here',
+    'FORM_ADD_CODE_CARD_GIFT' => 'Geben Sie Ihren Code ein',
     'FORM_ADD_SPONSOR_NAME' => 'Sponsorname',
     'Please check your input: %s' => 'Bitte überprüfen Sie Ihre Eingabe: %s',
     'Too many attempts. Please try again later.' => 'Zu viele Versuche. Bitte versuchen Sie es später erneut.',
@@ -33,4 +35,11 @@ return array(
     'The amount to spend is not a number.' => 'Der einzulösende Betrag ist keine Zahl.',
     'A cart that holds a gift card cannot be paid with gift cards.' => 'Ein Warenkorb, der einen Geschenkgutschein enthält, kann nicht mit Geschenkgutscheinen bezahlt werden.',
     'One of the selected gift cards cannot be spent by this customer.' => 'Einer der ausgewählten Geschenkgutscheine kann nicht eingelöst werden.',
+    'FORM_ADD_AMOUNT_CARD_GIFT' => 'Gewünschter Betrag',
+    'FORM_ADD_AMOUNT_GC' => 'Betrag',
+    'FORM_ADD_EXPIRATION_GC' => 'Ablaufdatum',
+    'FORM_LIST_CARD_GIFT' => 'Liste der Geschenkgutscheine',
+    'FORM_ADD_EMAIL_STATUS_ID' => 'Bestellstatus',
+    'FORM_ADD_EMAIL_SUBJECT' => 'Betreff der E-Mail',
+    'FORM_ADD_EMAIL_TEXT' => 'Text der E-Mail',
 );

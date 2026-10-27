@@ -1,5 +1,6 @@
 {# Edit a gift card modal — form: edit_gift_card #}
-<div class="modal fade" id="manualy_edit_card_gift_dialog" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="manualy_edit_card_gift_dialog" tabindex="-1" aria-hidden="true"
+     data-card-url="{{ path('gift_card_admin', { code: '__CODE__' }) }}">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form action="/admin/module/theliagiftcard/edit-gift-card" method="post">
@@ -15,6 +16,9 @@
                     {{ form_widget(form.success_url, { value: app.request.uri }) }}
                     {{ form_widget(form.gift_card_id, { id: 'giftCardId', type: 'hidden' }) }}
 
+                    <div class="alert alert-danger d-none" id="giftCardReadError" role="alert">
+                        {{ 'The gift card could not be read. Reload the page and try again.'|trans({}, 'theliagiftcard.bo.default-twig') }}
+                    </div>
                     <div class="row">
                         <div class="col-sm-12 mb-3">
                             {{ form_label(form.beneficiary_address) }}
@@ -32,7 +36,14 @@
                             {{ form_label(form.amount) }}
                             {{ form_widget(form.amount, { id: 'amount', attr: { class: 'form-control', step: 'any' } }) }}
                             {{ form_errors(form.amount) }}
+                            <div class="form-text" id="giftCardSpent"
+                                 data-label="{{ 'Already spent: %spent%, %remaining% left'|trans({}, 'theliagiftcard.bo.default-twig') }}"></div>
                         </div>
+                    </div>
+                    <div class="mb-3">
+                        <span class="form-label d-block">{{ 'Message'|trans({}, 'theliagiftcard.bo.default-twig') }}</span>
+                        <p class="mb-0 text-break" id="giftCardMessage"
+                           data-empty="{{ 'No message'|trans({}, 'theliagiftcard.bo.default-twig') }}"></p>
                     </div>
                     <div class="table-responsive d-none">
                         <h4>{{ 'Usage history'|trans({}, 'theliagiftcard.bo.default-twig') }}</h4>
@@ -54,7 +65,7 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         {{ 'Cancel'|trans({}, 'theliagiftcard.bo.default-twig') }}
                     </button>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" id="giftCardSave">
                         {{ 'Save'|trans({}, 'theliagiftcard.bo.default-twig') }}
                     </button>
                 </div>

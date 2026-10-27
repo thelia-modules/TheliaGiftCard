@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Thelia\Controller\Admin\BaseAdminController;
 use Thelia\Core\Security\AccessManager;
+use Thelia\Core\Security\Exception\TokenAuthenticationException;
 use Thelia\Core\Security\Resource\AdminResources;
 use Thelia\Core\Template\ParserContext;
 use Thelia\Form\Exception\FormValidationException;
@@ -19,6 +20,7 @@ use Thelia\Log\Tlog;
 use Thelia\Model\ConfigQuery;
 use Thelia\Tools\TokenProvider;
 use Thelia\Tools\URL;
+use TheliaGiftCard\Dto\GiftCardListCriteria;
 use TheliaGiftCard\Model\GiftCard;
 use TheliaGiftCard\Model\GiftCardInfoCart;
 use TheliaGiftCard\Model\GiftCardInfoCartQuery;
@@ -103,9 +105,9 @@ class GiftCardConfigController extends BaseAdminController
 
         $form = $this->createForm('manualy_create_gift_card');
 
-        $giftCardForm = $this->validateForm($form);
-
         try {
+            // Inside the try: a field the form refuses goes back to the window with its message.
+            $giftCardForm = $this->validateForm($form);
             $expirationDate = $giftCardForm->get('expiration_date')->getData();
 
             $newGiftCard = new GiftCard();
@@ -124,6 +126,7 @@ class GiftCardConfigController extends BaseAdminController
                 ->setBeneficiaryName($giftCardForm->get('beneficiary_name')->getData())
                 ->setSponsorName($giftCardForm->get('sponsor_name')->getData())
                 ->setBeneficiaryMessage($giftCardForm->get('beneficiary_message')->getData())
+                ->setBeneficiaryAddress($giftCardForm->get('beneficiary_address')->getData() ?: null)
                 ->save();
         } catch (FormValidationException $error_message) {
             $error_message = $error_message->getMessage();
@@ -146,9 +149,11 @@ class GiftCardConfigController extends BaseAdminController
             return $response;
         }
 
-        $tokenProvider->checkToken((string) $request->request->get('_token'));
+        if (null !== $response = $this->refusedToken($request, $tokenProvider)) {
+            return $response;
+        }
 
-        $codeGC = $request->query->get('code');
+        $codeGC = $this->postedCode($request);
 
         $giftCard = GiftCardQuery::create()
             ->filterByCode($codeGC)
@@ -225,10 +230,12 @@ class GiftCardConfigController extends BaseAdminController
             return $response;
         }
 
-        $tokenProvider->checkToken((string) $request->request->get('_token'));
+        if (null !== $response = $this->refusedToken($request, $tokenProvider)) {
+            return $response;
+        }
 
         try {
-            $codeGC = $request->query->get('code');
+            $codeGC = $this->postedCode($request);
 
             $giftCard = GiftCardQuery::create()
                 ->filterByCode($codeGC)
@@ -244,8 +251,31 @@ class GiftCardConfigController extends BaseAdminController
     }
 
     /**
-     * The list script posts the status forms and only needs to know the change is made; a form sent
-     * without the script goes back to the list.
+     * A form posted without the token of the session is refused as forbidden, not as a server error.
+     */
+    private function refusedToken(Request $request, TokenProvider $tokenProvider): ?Response
+    {
+        try {
+            $tokenProvider->checkToken((string) $request->request->get('_token'));
+        } catch (TokenAuthenticationException) {
+            return new Response('', Response::HTTP_FORBIDDEN);
+        }
+
+        return null;
+    }
+
+    /**
+     * The code of the card travels in the body of the form, out of logs and history; the query string is
+     * still read for a shop whose template has not followed.
+     */
+    private function postedCode(Request $request): string
+    {
+        return (string) $request->request->get('code', (string) $request->query->get('code', ''));
+    }
+
+    /**
+     * The list posts the status forms and only needs to know the change is made when a script sends
+     * them; a form sent as a page goes back to the list, on the page and with the filters it left.
      */
     private function statusChangedResponse(Request $request): Response
     {
@@ -253,7 +283,11 @@ class GiftCardConfigController extends BaseAdminController
             return new Response('', Response::HTTP_NO_CONTENT);
         }
 
-        return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/module/TheliaGiftCard'));
-    }
+        // The query string of the list is read back through the criteria: only what the list knows goes
+        // into the address, never a destination of the form's choosing.
+        parse_str((string) $request->request->get('list', ''), $listQuery);
+        $query = GiftCardListCriteria::fromQuery($listQuery)->toQuery(withPage: true);
 
+        return $this->generateRedirect(URL::getInstance()->absoluteUrl('/admin/module/TheliaGiftCard', $query));
+    }
 }

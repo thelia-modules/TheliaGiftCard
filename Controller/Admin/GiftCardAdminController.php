@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Thelia\Controller\Admin\BaseAdminController;
 use Thelia\Core\Security\AccessManager;
 use Thelia\Core\Security\Resource\AdminResources;
+use Thelia\Model\Currency;
 use TheliaGiftCard\TheliaGiftCard;
 
 use TheliaGiftCard\Model\GiftCardInfoCartQuery;
@@ -19,8 +20,6 @@ use TheliaGiftCard\Model\GiftCardOrder;
 use TheliaGiftCard\Model\GiftCardOrderQuery;
 use TheliaGiftCard\Model\GiftCardQuery;
 use Thelia\Core\HttpFoundation\JsonResponse;
-use TheliaGiftCard\Hook\HookConfigurationManager;
-use Propel\Runtime\ActiveQuery\Criteria;
 
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -43,10 +42,21 @@ class GiftCardAdminController extends BaseAdminController
         $tab = [];
 
         if (!$giftCard = GiftCardQuery::create()->findOneByCode($code)) {
-            return new JsonResponse($tab);
+            return new JsonResponse(['message' => 'Unknown gift card'], Response::HTTP_NOT_FOUND);
         }
 
-        $tab['beneficiary_address'] = GiftCardInfoCartQuery::create()->filterByGiftCardId($giftCard->getId())->findOne()?->getBeneficiaryAddress();
+        // The language of the interface, as the list reads it (set on the request by the back office).
+        $locale = $request->getLocale();
+        $info = GiftCardInfoCartQuery::create()->filterByGiftCardId($giftCard->getId())->findOne();
+        $money = new \NumberFormatter($locale, \NumberFormatter::CURRENCY);
+        $currencyCode = (string) Currency::getDefaultCurrency()->getCode();
+        $spent = (float) $giftCard->getSpendAmount();
+
+        $tab['beneficiary_address'] = $info?->getBeneficiaryAddress();
+        // Read only in the edit window: what the buyer wrote, and what is left of the card.
+        $tab['beneficiary_message'] = (string) $info?->getBeneficiaryMessage();
+        $tab['spent'] = (string) $money->formatCurrency($spent, $currencyCode);
+        $tab['remaining'] = (string) $money->formatCurrency(max(0.0, (float) $giftCard->getAmount() - $spent), $currencyCode);
 
         $tab['amount'] = $giftCard->getAmount();
         $tab['expiration_date'] = $giftCard->getExpirationDate()?->format('Y-m-d');
@@ -62,9 +72,6 @@ class GiftCardAdminController extends BaseAdminController
         foreach ($ordersGiftCard as $orderGiftCard) {
             $orderModel = $orderGiftCard->getOrder();
             $date = $orderGiftCard->getCreatedAt();
-            $locale = $request->hasSession()
-                ? $request->getSession()->getLang()->getLocale()
-                : (\Thelia\Model\LangQuery::create()->findOneByByDefault(true)?->getLocale() ?? 'en_US');
             $orderStatus = $orderModel->getOrderStatus()->setLocale($locale)->getTitle();
 
             $orders[] = [
@@ -78,101 +85,5 @@ class GiftCardAdminController extends BaseAdminController
         $tab['HISTORY'] = $orders;
 
         return new JsonResponse($tab);
-    }
-
-    /**
-     */
-    #[Route('/show', name: 'gift_card_show_list')]
-    public function showGiftCardsList(Request $request): JsonResponse|Response
-    {
-        if (null !== $response = $this->checkAuth(AdminResources::MODULE, [TheliaGiftCard::MODULE_CODE], AccessManager::VIEW)) {
-            return $response;
-        }
-
-        $json = [
-            "data" => []
-        ];
-
-        $giftCards = GiftCardQuery::create();
-
-        $this->applyOrder($request, $giftCards);
-
-        if ($this->getOffset($request) && $this->getLength($request)) {
-            $giftCards
-                ->offset($this->getOffset($request))
-                ->limit($this->getLength($request));
-        }
-
-        $giftCards->find();
-
-        $queryCount = clone $giftCards;
-
-        foreach ($giftCards as $giftCard) {
-            $currentData = [
-                $giftCard->getId(),
-                $giftCard->getOrderId(),
-                $giftCard->getCode(),
-                $giftCard->getSponsorCustomerId(),
-                $giftCard->getBeneficiaryCustomerId(),
-                $giftCard->getAmount(),
-                $giftCard->getSpendAmount(),
-                $giftCard->getExpirationDate('d-m-Y'),
-                $giftCard->getCreatedAt('d-m-Y'),
-                $giftCard->getStatus(),
-                $giftCard->getId(),
-                $giftCard->getId(),
-                $giftCard->getId(),
-            ];
-
-            $json['data'][] = $currentData;
-        }
-
-        $json["recordsTotal"] = $queryCount->count();
-        $json["recordsFiltered"] = $queryCount->count();
-
-        return new JsonResponse($json);
-    }
-
-    protected function getLength(Request $request): int
-    {
-        return (int)$request->attributes->get('length', $request->query->get('length', $request->request->get('length')));
-    }
-
-    protected function getOffset(Request $request): int
-    {
-        return (int)$request->attributes->get('start', $request->query->get('start', $request->request->get('start')));
-    }
-
-    protected function getSearchValue(Request $request): ?string
-    {
-        $search = $request->attributes->get('search', $request->query->get('search', $request->request->get('search')));
-        return $search ? (string)$search['value'] : null;
-    }
-
-    protected function getOrderDir(Request $request): ?string
-    {
-        $order = $request->attributes->get('order', $request->query->get('order', $request->request->get('order')));
-        if (null === $order) {
-            return null;
-        }
-        return (string)$order[0]['dir'] === 'asc' ? Criteria::ASC : Criteria::DESC;
-    }
-
-    protected function applyOrder(Request $request, GiftCardQuery $query): void
-    {
-        $columnName = $this->getOrderColumnName($request);
-        if (null !== $columnName) {
-            $query->orderBy(
-                $columnName,
-                $this->getOrderDir($request)
-            );
-        }
-    }
-
-    protected function getOrderColumnName(Request $request)
-    {
-        $order = $request->attributes->get('order', $request->query->get('order', $request->request->get('order')));
-        return $order ?
-            HookConfigurationManager::getdefineColumnsDefinition()[(int)$order[0]['column']]['orm'] : null;
     }
 }

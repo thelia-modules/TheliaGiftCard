@@ -78,7 +78,7 @@ abstract class BaseGiftCardForm extends BaseForm
                 'beneficiary_email',
                 EmailType::class,
                 [
-                    'label' => $this->translator->trans('FORM_ADD_BENEFICIARY_MESSAGE', [], TheliaGiftCard::DOMAIN_NAME),
+                    'label' => $this->translator->trans('FORM_ADD_BENEFICIARY_EMAIL', [], TheliaGiftCard::DOMAIN_NAME),
                     'label_attr' => [
                         'for' => $this->getName().'-label',
                     ],
@@ -87,13 +87,14 @@ abstract class BaseGiftCardForm extends BaseForm
             )
             ->add(
                 'beneficiary_address',
-                TextType::class,
+                EmailType::class,
                 [
                     'label' => $this->translator->trans('FORM_ADD_BENEFICIARY_ADDRESS', [], TheliaGiftCard::DOMAIN_NAME),
                     'label_attr' => [
                         'for' => $this->getName().'-label',
                     ],
-                    'constraints' => [new Length(max: self::TEXT_MAX_LENGTH)],
+                    'required' => false,
+                    'constraints' => [new Email(), new Length(max: self::TEXT_MAX_LENGTH)],
                 ]
             );
     }
