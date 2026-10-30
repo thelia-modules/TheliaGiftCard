@@ -1,6 +1,13 @@
 # Changelog
 
-## 3.4.0 (unreleased)
+## 3.4.1
+
+### Fixed
+
+- The front-office catalogue of the Flexy theme in German translates every text the French one does. It only had the texts of the summary lines: on a German shop, the gift card block of the payment step, the form of a gift card product and the customer area read in English (« Your gift cards », « Gift card code », « Remove my gift cards from this order »). The texts it had now say « Geschenkkarte », as the back office and the e-mails do, instead of « Geschenkgutschein ».
+- `FrontCatalogueTest` keeps the German and English catalogues of the front office in step with the French one, placeholders included.
+
+## 3.4.0
 
 ### Changed
 
