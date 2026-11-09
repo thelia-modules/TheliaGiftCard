@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.4.5
+
+### Fixed
+
+- The German form of a gift card named the giver « Sponsorname » (the name of a sponsor) and the person it is for « Name des Begünstigten », a banking word for the payee of a transfer. They now read « Name des Absenders » and « Name des Empfängers », as « E-Mail des Empfängers » already does.
+
 ## 3.4.4
 
 ### Fixed
