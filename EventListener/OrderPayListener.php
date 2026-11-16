@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Event\Order\OrderEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Model\CartItemQuery;
+use TheliaGiftCard\Dto\CreatedGiftCard;
 use TheliaGiftCard\Model\GiftCardInfoCart;
 use TheliaGiftCard\Model\GiftCardInfoCartQuery;
 use TheliaGiftCard\Service\GiftCardGenerateService;
@@ -30,11 +31,37 @@ class OrderPayListener implements EventSubscriberInterface
     )
     {}
 
+    /**
+     * The cards created while each status change is dispatched, until SendGiftCard, the last
+     * listener of the dispatch, takes them to send them.
+     *
+     * @var \WeakMap<OrderEvent, list<CreatedGiftCard>>|null
+     */
+    private ?\WeakMap $createdCards = null;
+
+    /**
+     * Runs just under Thelia\Action\Order::updateStatus (128), which writes the new status the
+     * creation reads.
+     */
     public function creatCodeGiftCard(OrderEvent $event): void
     {
         if ($event->getOrder()->getStatusId() == TheliaGiftCard::getGiftCardOrderStatusId()) {
-            $this->giftCardGenerateService->generateGifcard($event->getOrder());
+            $this->createdCards ??= new \WeakMap();
+            $this->createdCards[$event] = $this->giftCardGenerateService->generateGifcard($event->getOrder());
         }
+    }
+
+    /**
+     * The cards created by this status change, none when the order already had them.
+     *
+     * @return list<CreatedGiftCard>
+     */
+    public function takeCreatedCards(OrderEvent $event): array
+    {
+        $cards = $this->createdCards[$event] ?? [];
+        unset($this->createdCards[$event]);
+
+        return $cards;
     }
 
     /**
@@ -93,7 +120,7 @@ class OrderPayListener implements EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            TheliaEvents::ORDER_UPDATE_STATUS => ['creatCodeGiftCard', 128],
+            TheliaEvents::ORDER_UPDATE_STATUS => ['creatCodeGiftCard', 127],
             TheliaEvents::ORDER_PAY => ['onOrderPayGiftCardHandleInfo', 100],
         ];
     }

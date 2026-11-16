@@ -6,63 +6,82 @@
 
 namespace TheliaGiftCard\EventListener;
 
-use Propel\Runtime\Exception\PropelException;
+use Psr\Container\ContainerInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Thelia\Core\Event\Order\OrderEvent;
 use Thelia\Core\Event\TheliaEvents;
-use Thelia\Mailer\MailerFactory;
-use TheliaGiftCard\Model\GiftCard;
+use Thelia\Log\Tlog;
+use Thelia\Model\Order;
+use TheliaGiftCard\Dto\CreatedGiftCard;
+use TheliaGiftCard\Model\GiftCardInfoCartQuery;
 use TheliaGiftCard\Service\GiftCardEmailService;
-use TheliaGiftCard\Service\GiftCardService;
 use TheliaGiftCard\TheliaGiftCard;
 
+/**
+ * The "automatic" mode: the code of the cards created by a change of status is e-mailed.
+ *
+ * It runs after every other listener of the change (the core ones stop at priority 5): when one of
+ * them fails and the caller rolls its transaction back, no code has left for a card that is gone.
+ */
 class SendGiftCard implements EventSubscriberInterface
 {
-
     public function __construct(
-        protected MailerFactory        $mailer,
-        protected GiftCardEmailService $giftCardEmailService,
-        protected GiftCardService      $giftCardService,
-    )
-    {
+        protected OrderPayListener $orderPayListener,
+        // A locator: the e-mail service is built only when something is sent.
+        #[AutowireLocator([GiftCardEmailService::class])]
+        protected ContainerInterface $services,
+    ) {
     }
 
-    /**
-     * @throws PropelException
-     */
     public function onOrderStatusUpdate(OrderEvent $event): void
     {
-        if ($event->getOrder()->getStatusId() !== TheliaGiftCard::getGiftCardOrderStatusId()) {
+        // Taken in every mode, so that nothing waits for the end of the dispatch.
+        $createdCards = $this->orderPayListener->takeCreatedCards($event);
+
+        if (!TheliaGiftCard::isAutoSendEmail()) {
             return;
         }
 
-        $order = $event->getOrder();
-        $giftCards = $order->getGiftCards();
+        foreach ($createdCards as $createdCard) {
+            $this->sendCode($event->getOrder(), $createdCard);
+        }
+    }
 
-        /** @var GiftCard $giftCard */
-        foreach ($giftCards as $giftCard) {
-            if (!$giftCard->getStatus()) {
-                continue;
+    /**
+     * To the recipient typed for the order line of the card, to the buyer when that line has none,
+     * in the language of the order. A failure is logged and never stops the change of status: the
+     * card stays active and can be sent by hand from the back office.
+     */
+    private function sendCode(Order $order, CreatedGiftCard $createdCard): void
+    {
+        $giftCard = $createdCard->giftCard;
+
+        try {
+            $recipient = trim((string) GiftCardInfoCartQuery::create()
+                ->filterByOrderProductId($createdCard->orderProductId)
+                ->findOne()
+                ?->getBeneficiaryEmail());
+
+            if ('' === $recipient) {
+                $recipient = (string) $order->getCustomer()->getEmail();
             }
 
-            /*$infos = $this->giftCardService->getInfoGiftCard($giftCard->getCode());
-            $pdf = $this->giftCardEmailService->generatePdfAction($giftCard->getCode());
+            $emailService = $this->services->get(GiftCardEmailService::class);
+            \assert($emailService instanceof GiftCardEmailService);
 
-            if ($infos && isset($infos['beneficiaryEmail']) && !empty($infos['beneficiaryEmail'])) {
-                $email = $this->giftCardEmailService->createEmail($pdf, $giftCard, $infos['beneficiaryEmail'], true);
-                $this->mailer->send($email);
-            } else {
-                $customerEmail = $order->getCustomer()->getEmail();
-                $email = $this->giftCardEmailService->createEmail($pdf, $giftCard, $customerEmail);
-                $this->mailer->send($email);
-            }*/
+            // The locale is given: without it the language is the one of the administrator in session.
+            $emailService->sendByEmail($giftCard->getCode(), $recipient, null, null, $order->getLang()?->getLocale());
+        } catch (\Throwable $exception) {
+            // The class only: the message of a refused address quotes the address.
+            Tlog::getInstance()->addError(\sprintf('Gift card %d of order %d not sent by e-mail (%s).', $giftCard->getId(), $order->getId(), $exception::class));
         }
     }
 
     public static function getSubscribedEvents(): array
     {
         return [
-            TheliaEvents::ORDER_UPDATE_STATUS => ['onOrderStatusUpdate', 60]
+            TheliaEvents::ORDER_UPDATE_STATUS => ['onOrderStatusUpdate', -10],
         ];
     }
 }

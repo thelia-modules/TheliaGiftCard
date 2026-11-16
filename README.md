@@ -4,7 +4,9 @@ Sell, send and redeem gift cards on a Thelia 3 shop.
 
 - A product of the configured gift card category is a gift card. When an order reaches the configured status, one
   card is created per unit bought: an eight-character code, the price with taxes as amount, valid for one year,
-  disabled until the shop enables it (or enabled at once in the "automatic" mode, which sends nothing).
+  disabled until the shop enables it. In the "automatic" mode the cards are enabled at once and the code is sent
+  by e-mail, with the PDF, in the language of the order: to the recipient typed at the purchase, to the buyer otherwise.
+  A failed send is logged and never blocks the order; the card can still be sent by hand.
 - The back-office lists the cards, creates, edits, enables and disables them, downloads a card as a PDF and sends it
   by email to an address the administrator types.
 - The customer attaches a card to their account with its code, then spends it when paying.

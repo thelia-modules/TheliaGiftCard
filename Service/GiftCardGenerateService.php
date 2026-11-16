@@ -11,6 +11,7 @@ use Thelia\Model\FeatureProductQuery;
 use Thelia\Model\Lang;
 use Thelia\Model\Order;
 use Thelia\Model\OrderProduct;
+use TheliaGiftCard\Dto\CreatedGiftCard;
 use TheliaGiftCard\Model\Base\GiftCardInfoCartQuery;
 use TheliaGiftCard\Model\GiftCard;
 use TheliaGiftCard\Model\GiftCardQuery;
@@ -24,10 +25,15 @@ class GiftCardGenerateService
     }
 
     /**
+     * Creates the cards the order is missing, one per unit bought.
+     *
+     * @return list<CreatedGiftCard> the cards created by this call, none for a card the order already has
+     *
      * @throws PropelException
      */
-    public function generateGifcard(Order $order): void
+    public function generateGifcard(Order $order): array
     {
+        $createdCards = [];
         // Comptage du nombre de carte cadeau à créer par produit
         $countMaxbyAmountByProduct = $this->getCountGiftCards($order);
 
@@ -94,6 +100,8 @@ class GiftCardGenerateService
                     }
 
                     if (null != $newGiftCard) {
+                        $createdCards[] = new CreatedGiftCard($newGiftCard, (int) $orderProduct->getId());
+
                         $giftCardInfo = GiftCardInfoCartQuery::create()
                             ->filterByOrderProductId($orderProduct->getId())
                             ->findOne();
@@ -105,6 +113,8 @@ class GiftCardGenerateService
                 }
             }
         }
+
+        return $createdCards;
     }
 
     /**

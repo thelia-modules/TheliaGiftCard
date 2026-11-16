@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.5.0
+
+### Added
+
+- The "automatic" mode now sends the code. When the order reaches the status that creates the cards, each card created is enabled and e-mailed with its PDF, in the language of the order, to the recipient typed at the purchase or to the buyer. Going through the status again sends nothing more, and a send that fails is logged without blocking the change of status. With the mode off nothing changes. `GiftCardAutoSendTest` covers it.
+
+### Changed
+
+- `GiftCardGenerateService::generateGifcard()` returns the cards it created, each with its order line (`Dto\CreatedGiftCard`), instead of nothing. A code goes to the recipient typed for the order line of the card, whatever the quantity of the line.
+- The cards are created at priority 127 of `ORDER_UPDATE_STATUS` (was 128, as the core, which writes the status), and sent by `SendGiftCard` at priority -10, after every other listener. The constructor of `SendGiftCard` changed.
+
 ## 3.4.5
 
 ### Fixed

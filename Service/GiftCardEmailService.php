@@ -28,8 +28,8 @@ use TheliaGiftCard\Exception\GiftCardNotFoundException;
  * and email themes. The module ships generic templates for the "default" themes; a shop
  * overrides any of them by putting a file of the same name in its own theme.
  *
- * Everything is rendered in one language, the back-office language of the administrator who
- * sends the card unless another one is asked for: the templates receive it as
+ * Everything is rendered in one language, the one asked for (the language of the order in the
+ * automatic mode), else the back-office language of the administrator who sends the card: the templates receive it as
  * `gift_card_locale` (the parser forces its own `locale` variable to the session language).
  */
 final readonly class GiftCardEmailService
@@ -136,7 +136,8 @@ final readonly class GiftCardEmailService
     }
 
     /**
-     * Sends the card as a PDF attachment to the address the administrator typed.
+     * Sends the card as a PDF attachment to the address given: typed by the administrator, or resolved
+     * by the automatic mode.
      *
      * @throws GiftCardNotFoundException when no card carries the code
      */
