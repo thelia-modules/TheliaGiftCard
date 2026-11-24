@@ -100,17 +100,13 @@ final class GiftCardPaymentPart
     }
 
     /**
-     * Whether any card is on the cart.
+     * Whether any card pays a part of the cart, spendable or not. A card that expired, was disabled or
+     * was spent elsewhere since it was put on the cart is no longer listed, and the placement refuses
+     * it (GiftCardPaymentService::debit()): its part must stay removable.
      */
     public function getHasCardsOnCart(): bool
     {
-        foreach ($this->getCards() as $card) {
-            if ('0.00' !== $card->amountOnCart) {
-                return true;
-            }
-        }
-
-        return false;
+        return null !== $this->customer() && $this->cartSpending->amountOnCart($this->cartFacade->getOrCreateFromSession()) > 0;
     }
 
     /**
