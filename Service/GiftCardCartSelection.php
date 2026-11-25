@@ -14,7 +14,7 @@ use TheliaGiftCard\Exception\GiftCardTooManyCodeAttemptsException;
 
 /**
  * What the buyer does with their gift cards on the payment step: tick a card, untick it, type the
- * code of a card, take every card off.
+ * code of a card, choose the amount the cards pay, take every card off.
  *
  * GiftCardCartSpending::spend() takes everything off the cart before it judges what it is asked
  * for, so a request it refuses would also have lost the buyer their cards and coupons. Here the
@@ -90,6 +90,32 @@ final readonly class GiftCardCartSelection
 
         $this->assertSpendable($customer, $cart, $giftCardId);
         $this->apply($customer, $cart, [...$onCart, $giftCardId]);
+    }
+
+    /**
+     * Spends the amount the buyer typed from the cards on the cart, one after the other, each for
+     * what is left on it, the whole for what the cart costs at most: a larger amount is brought
+     * down to that. A card the amount does not reach comes off the cart; ticking it puts it back,
+     * for as much as it can pay. Zero takes every card off.
+     *
+     * @throws GiftCardSpendRefusedException CODE_INVALID_AMOUNT for anything but a positive amount
+     *                                       or zero, with a dot or a comma before the cents
+     */
+    public function spendAmount(Customer $customer, Cart $cart, string $amount): void
+    {
+        $amount = str_replace(',', '.', trim($amount));
+
+        if (1 !== preg_match('/^\d{1,9}(?:\.\d+)?$/', $amount)) {
+            throw GiftCardSpendRefusedException::invalidAmount();
+        }
+
+        $onCart = $this->idsOnCart($customer, $cart);
+
+        if ([] === $onCart) {
+            return;
+        }
+
+        $this->cartSpending->spend($customer, $cart, $onCart, $amount);
     }
 
     /**

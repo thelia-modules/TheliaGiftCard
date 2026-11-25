@@ -216,6 +216,7 @@ final class GiftCardPaymentPartTest extends WebIntegrationTestCase
         $responses = [
             'toggle' => $this->liveAction('toggle', ['giftCardId' => (int) $giftCard->getId()]),
             'applyCode' => $this->liveAction('applyCode', [], ['code' => $typed->getCode()]),
+            'spendAmount' => $this->liveAction('spendAmount', [], ['amount' => '10']),
             'remove' => $this->liveAction('remove', []),
         ];
 
@@ -288,6 +289,87 @@ final class GiftCardPaymentPartTest extends WebIntegrationTestCase
         self::assertSame(['30.00'], $this->amountsOnCart($cart), 'Neither the other card on the cart, nor mine off it.');
         self::assertStringNotContainsString('123.45', $response->text());
         self::assertGreaterThanOrEqual(1, $response->filter('[role=alert]')->count());
+    }
+
+    public function testTheAmountTypedIsSharedBetweenTheCardsOnTheCartAndTheStepShowsWhatIsLeft(): void
+    {
+        $provider = $this->installProvider();
+        [$cart, $customer] = $this->cartWorth100((int) $provider->getId());
+        $first = $this->giftCard(['amount' => '30', 'beneficiaryCustomerId' => $customer->getId()]);
+        $second = $this->giftCard(['amount' => '20', 'beneficiaryCustomerId' => $customer->getId()]);
+        $this->liveAction('toggle', ['giftCardId' => (int) $first->getId()]);
+        $this->liveAction('toggle', ['giftCardId' => (int) $second->getId()]);
+        self::assertSame(['30.00', '20.00'], $this->amountsOnCart($cart), 'Ticked, the cards pay all they can.');
+
+        $component = $this->component();
+        self::assertSame('50.00', $component->filter('input#gift-card-amount')->attr('value'), 'The field shows what the cards pay.');
+        self::assertStringContainsString('50.00', $component->text(), 'The most they can pay is shown.');
+
+        $response = $this->liveAction('spendAmount', [], ['amount' => '40']);
+
+        self::assertSame(['30.00', '10.00'], $this->amountsOnCart($cart), 'The amount is shared, never debited whole on each card.');
+        self::assertSame('40.00', $response->filter('input#gift-card-amount')->attr('value'));
+        self::assertStringContainsString('PAYMENT_PARTS_CHANGED', $response->html());
+
+        $parts = $this->partsOf($this->requestThePaymentStep());
+        self::assertStringContainsString('Left to pay', $parts);
+        self::assertStringContainsString('60.00', $parts);
+        self::assertSame(0.0, $this->spentOn($first), 'Nothing is debited before the order is paid.');
+    }
+
+    public function testAnAmountAboveWhatTheCardsCanPayIsBroughtDownAndZeroTakesThemOff(): void
+    {
+        [$cart, $customer] = $this->cartWorth100();
+        $card = $this->giftCard(['amount' => '150', 'beneficiaryCustomerId' => $customer->getId()]);
+        $this->liveAction('toggle', ['giftCardId' => (int) $card->getId()]);
+
+        $this->liveAction('spendAmount', [], ['amount' => '12,50']);
+        self::assertSame(['12.50'], $this->amountsOnCart($cart), 'A comma before the cents is read as the decimal mark.');
+
+        $this->liveAction('spendAmount', [], ['amount' => '1000']);
+        self::assertSame(['100.00'], $this->amountsOnCart($cart), 'Never more than the cart costs.');
+
+        $this->liveAction('spendAmount', [], ['amount' => '0']);
+        self::assertSame([], $this->amountsOnCart($cart));
+    }
+
+    public function testAnAmountTypedIsKeptWhenTheComponentIsDrawnAgainBeforeTheActionOfTheButton(): void
+    {
+        [$cart, $customer] = $this->cartWorth100();
+        $card = $this->giftCard(['amount' => '30', 'beneficiaryCustomerId' => $customer->getId()]);
+        $this->liveAction('toggle', ['giftCardId' => (int) $card->getId()]);
+
+        // The step draws the component again on its own; the browser sends the field typed with it.
+        $drawn = $this->liveAction('', [], ['amount' => '10']);
+        self::assertSame('10', (string) $drawn->filter('input#gift-card-amount')->attr('value'));
+
+        $this->liveAction('spendAmount', [], [], component: $drawn->filter(\sprintf('[data-live-name-value="%s"]', self::COMPONENT))->first());
+        self::assertSame(['10.00'], $this->amountsOnCart($cart));
+    }
+
+    public function testAnAmountThatIsNotOneIsRefusedKeptInTheFieldAndChangesNothing(): void
+    {
+        [$cart, $customer] = $this->cartWorth100();
+        $card = $this->giftCard(['amount' => '30', 'beneficiaryCustomerId' => $customer->getId()]);
+        $this->liveAction('toggle', ['giftCardId' => (int) $card->getId()]);
+
+        foreach (['-5', 'abc', '1e3', '', '10.5.2'] as $typed) {
+            $response = $this->liveAction('spendAmount', [], ['amount' => $typed]);
+
+            self::assertSame(['30.00'], $this->amountsOnCart($cart), $typed);
+            $field = $response->filter('input#gift-card-amount');
+            self::assertSame('true', $field->attr('aria-invalid'), $typed);
+            self::assertSame($typed, (string) $field->attr('value'), 'The buyer corrects what they typed: '.$typed);
+            self::assertStringNotContainsString('PAYMENT_PARTS_CHANGED', $response->html(), $typed);
+        }
+    }
+
+    public function testNoAmountFieldWithoutACardOnTheCart(): void
+    {
+        [, $customer] = $this->cartWorth100();
+        $this->giftCard(['amount' => '30', 'beneficiaryCustomerId' => $customer->getId()]);
+
+        self::assertCount(0, $this->component()->filter('input#gift-card-amount'));
     }
 
     /**
@@ -484,7 +566,8 @@ final class GiftCardPaymentPartTest extends WebIntegrationTestCase
     }
 
     /**
-     * One action of the component, the way the Stimulus controller sends it.
+     * One action of the component, the way the Stimulus controller sends it; no action ('') draws
+     * it again.
      *
      * @param array<string, mixed> $arguments
      * @param array<string, mixed> $updated   the writable props the buyer changed
@@ -500,7 +583,7 @@ final class GiftCardPaymentPartTest extends WebIntegrationTestCase
 
         $this->client->request(
             'POST',
-            \sprintf('%s/%s', $component->attr('data-live-url-value'), $action),
+            '' === $action ? (string) $component->attr('data-live-url-value') : \sprintf('%s/%s', $component->attr('data-live-url-value'), $action),
             ['data' => json_encode([
                 'props' => json_decode((string) $component->attr('data-live-props-value'), true, 512, \JSON_THROW_ON_ERROR),
                 'updated' => [] === $updated ? new \stdClass() : $updated,
