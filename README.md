@@ -53,6 +53,8 @@ Requires Thelia 3.3.0: the module is an instant payment means of the core (`Inst
   (`GiftCardPaymentPartThemeHook`, which answers only for its own module id) with a live component
   (`TheliaGiftCard:PaymentPart`). The buyer ticks one of their cards, or types the code of one (activated on their
   account on the way, with the limits of the activation form; every refusal reads the same), or takes the cards off.
+  Once a card is on the cart, the buyer can type the amount the cards pay, at most the smallest of their balance and
+  the cart total: it is shared between the cards in turn, a card it does not reach comes off, and zero takes them off.
   Each action is written on the cart by the module (`GiftCardCartSelection`), then the component emits
   `PAYMENT_PARTS_CHANGED` for the step to read the payment composition again. The module never writes the payment module
   of the cart: the theme does. The component is built from Flexy's own components and keys; another theme draws its own.

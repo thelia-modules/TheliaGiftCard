@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.6.0
+
+### Added
+
+- On the payment step, the buyer chooses the amount their gift cards pay, as the forms of Thelia 2 allowed. Once a card is on the cart, the component shows an « Amount to use » field, filled with what the cards pay, and the most they can pay under it: the smallest of the balance of the cards on the cart and the cart total. The amount typed is shared between the cards one after the other, each up to its balance, a card it does not reach comes off the cart, and zero takes them all off. A comma before the cents is read as the decimal mark; anything that is not an amount is refused by the server and kept in the field for the buyer to correct. Texts in English, French and German. `GiftCardCartSelection::spendAmount()` writes it; `GiftCardPaymentPartTest` covers it.
+- `GiftCardSpendRefusedException::CODE_INVALID_AMOUNT` and `invalidAmount()`.
+
 ## 3.5.0
 
 ### Added

@@ -57,4 +57,8 @@ return array(
     'valid until %date%' => 'valable jusqu\'au %date%',
     'Amount to pay with the gift card' => 'Montant à payer par carte cadeau',
     'Apply the gift card' => 'Appliquer la carte cadeau',
+    'Amount to use' => 'Montant à utiliser',
+    'Maximum amount: %amount%' => 'Montant maximum utilisable : %amount%',
+    'Type an amount, such as 20 or 20.50.' => 'Saisissez un montant, par exemple 20 ou 20,50.',
+    'Use' => 'Utiliser',
 );

@@ -18,9 +18,14 @@ final class GiftCardSpendRefusedException extends \RuntimeException
      */
     public const int CODE_NOT_USABLE = 1;
 
+    /**
+     * The `code` of the refusal of an amount typed by the buyer: the one the buyer is told to type again.
+     */
+    public const int CODE_INVALID_AMOUNT = 2;
+
     public static function invalidAmount(): self
     {
-        return new self('The amount to spend is not a number.');
+        return new self('The amount to spend is not a number.', self::CODE_INVALID_AMOUNT);
     }
 
     public static function cartHoldsAGiftCard(): self

@@ -57,4 +57,8 @@ return array(
     'valid until %date%' => 'valid until %date%',
     'Amount to pay with the gift card' => 'Amount to pay with the gift card',
     'Apply the gift card' => 'Apply the gift card',
+    'Amount to use' => 'Amount to use',
+    'Maximum amount: %amount%' => 'Maximum amount: %amount%',
+    'Type an amount, such as 20 or 20.50.' => 'Type an amount, such as 20 or 20.50.',
+    'Use' => 'Use',
 );

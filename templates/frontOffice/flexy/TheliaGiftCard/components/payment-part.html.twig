@@ -51,6 +51,27 @@
             </fieldset>
         {% endif %}
 
+        {# The amount the ticked cards pay: they pay all they can until the buyer types less.
+           Bound to `amount`, which shows what the cards pay whenever the cart changed. #}
+        {% if this.hasCardsOnCart %}
+            <form class="flex flex-col gap-1" data-action="live#action:prevent" data-live-action-param="spendAmount">
+                <div class="flex flex-wrap items-end gap-2">
+                    {{ component('Fields:Input:Base', {
+                        label: 'Amount to use'|theliagiftcard_trans,
+                        name: 'gift-card-amount',
+                        id: 'gift-card-amount',
+                        value: this.amount,
+                        autocomplete: 'off',
+                        error: this.error == 'amount' ? 'Type an amount, such as 20 or 20.50.'|theliagiftcard_trans : false,
+                        'input:data-model': 'norender|amount',
+                        'input:inputmode': 'decimal',
+                    }) }}
+                    <twig:Molecules:Button:Base color="secondary" type="submit" text="{{ 'Use'|theliagiftcard_trans|escape('html') }}" />
+                </div>
+                <p class="paragraph-4 text-grey-dark">{{ 'Maximum amount: %amount%'|theliagiftcard_trans({'%amount%': this.maximumAmount|format_currency(this.currencyCode, locale: this.langCode)}) }}</p>
+            </form>
+        {% endif %}
+
         {# The code of a card the buyer has not activated yet: typing it activates it on the
            account, as the account page does, and puts it on the order. #}
         <form class="flex flex-wrap items-end gap-2" data-action="live#action:prevent" data-live-action-param="applyCode">
