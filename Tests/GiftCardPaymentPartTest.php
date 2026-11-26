@@ -217,6 +217,7 @@ final class GiftCardPaymentPartTest extends WebIntegrationTestCase
 
         self::assertCount(0, $component->filter('input[type=checkbox][data-live-gift-card-id-param]'), 'An expired card is not offered.');
         self::assertCount(1, $component->filter('[data-live-action-param="remove"]'), 'The part it pays can still be taken off.');
+        self::assertCount(0, $component->filter('[data-live-action-param="spendAmount"]'), 'No amount can be spread over cards the buyer can no longer spend.');
 
         $this->liveAction('remove', []);
 
