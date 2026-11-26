@@ -19,9 +19,11 @@ use Thelia\Core\Translation\Translator;
 use Thelia\Mailer\MailerFactory;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\Currency;
+use Thelia\Model\CustomerQuery;
 use Thelia\Model\Lang;
 use Thelia\Model\LangQuery;
 use TheliaGiftCard\Exception\GiftCardNotFoundException;
+use TheliaGiftCard\Model\GiftCardQuery;
 
 /**
  * Renders a gift card as a PDF and sends it by email, from the Twig templates of the active PDF
@@ -84,6 +86,8 @@ final readonly class GiftCardEmailService
             throw new GiftCardNotFoundException('No gift card for the requested code.');
         }
 
+        $giftCard = GiftCardQuery::create()->findOneByCode($code);
+
         return $this->render($this->templateHelper->getActivePdfTemplate(), self::PDF_TEMPLATE, self::PDF_TEMPLATE, [
             'gift_card_locale' => $this->resolveLocale($locale),
             'code' => (string) $infos['code'],
@@ -92,11 +96,27 @@ final readonly class GiftCardEmailService
             // does not depend on a currency in session, absent from the command line.
             'currency_id' => Currency::getDefaultCurrency()->getId(),
             'expiration_date' => $infos['expirationDate'],
-            'sponsor_name' => (string) $infos['sponsorName'],
-            'beneficiary_name' => (string) $infos['beneficiaryName'],
+            'sponsor_name' => $this->nameOr((string) $infos['sponsorName'], $giftCard?->getSponsorCustomerId(), (string) ConfigQuery::getStoreName()),
+            'beneficiary_name' => $this->nameOr((string) $infos['beneficiaryName'], $giftCard?->getBeneficiaryCustomerId(), ''),
             'message' => (string) $infos['message'],
             'store_name' => (string) ConfigQuery::getStoreName(),
         ]);
+    }
+
+    /**
+     * The name typed for the card, or else the one the list of the back office shows: the account of
+     * the customer (the buyer, the customer who activated the card), or else the fallback (the shop,
+     * which gives the cards made in the back office).
+     */
+    private function nameOr(string $typed, ?int $customerId, string $fallback): string
+    {
+        if ('' !== trim($typed)) {
+            return $typed;
+        }
+
+        $customer = null !== $customerId ? CustomerQuery::create()->findPk($customerId) : null;
+
+        return null !== $customer ? trim($customer->getFirstname().' '.$customer->getLastname()) : $fallback;
     }
 
     /**

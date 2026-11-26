@@ -53,6 +53,22 @@ final class GiftCardEmailTest extends GiftCardTestCase
         }
     }
 
+    public function testThePdfOfACardWithNoNameTypedNamesThePeopleTheListShows(): void
+    {
+        $factory = $this->createFixtureFactory();
+        $manual = $this->giftCard();
+        self::assertStringContainsString('De : Test shop', $this->pdfPeople($manual), 'A card of the back office comes from the shop.');
+
+        $activated = $this->giftCard(['beneficiaryCustomerId' => $factory->customer($factory->customerTitle(), ['firstname' => 'Camille', 'lastname' => 'Martin'])->getId()]);
+        self::assertStringContainsString('Pour : Camille Martin', $this->pdfPeople($activated), 'The customer who activated it is the one it is for.');
+
+        $bought = $this->giftCard();
+        $bought->setSponsorCustomerId($factory->customer($factory->customerTitle(), ['firstname' => 'Paul', 'lastname' => 'Durand'])->getId())->save();
+        self::assertStringContainsString('De : Paul Durand', $this->pdfPeople($bought), 'The buyer gives it.');
+
+        self::assertStringContainsString('De : Alice', $this->pdfPeople($this->cardWithDetails()), 'A name typed comes first.');
+    }
+
     public function testThePdfFollowsTheBackOfficeLanguageOfTheAdministrator(): void
     {
         $giftCard = $this->cardWithDetails();
@@ -149,6 +165,16 @@ final class GiftCardEmailTest extends GiftCardTestCase
             ->save();
 
         return $giftCard;
+    }
+
+    /**
+     * The block of the PDF that names the giver and the recipient, without its tags.
+     */
+    private function pdfPeople(GiftCard $giftCard): string
+    {
+        $html = $this->service()->renderPdfHtml($giftCard->getCode(), 'fr_FR');
+
+        return (string) preg_replace('/\s+/', ' ', strip_tags($html));
     }
 
     private function service(): GiftCardEmailService
