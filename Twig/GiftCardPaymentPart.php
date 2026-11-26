@@ -110,6 +110,21 @@ final class GiftCardPaymentPart
     }
 
     /**
+     * Whether a card the buyer can still spend pays a part of the cart: only then is there an
+     * amount to spread over the cards.
+     */
+    public function getHasSpendableCardsOnCart(): bool
+    {
+        foreach ($this->getCards() as $card) {
+            if ('0.00' !== $card->amountOnCart) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * What the cards on the cart pay now, a decimal string.
      */
     public function getAmountOnCart(): string
