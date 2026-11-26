@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.6.1
+
+### Fixed
+
+- The PDF of a card made in the back office named nobody: « From » and « For » stayed empty unless names were typed for the card. With no name typed, the PDF now names the people the list of the back office shows: the buyer's account, or else the shop, as the giver; the account of the customer who activated the card as the recipient. A name typed for the card still comes first, and the message is still only the one typed. `GiftCardEmailTest::testThePdfOfACardWithNoNameTypedNamesThePeopleTheListShows` covers it.
+
 ## 3.6.0
 
 ### Added
