@@ -203,6 +203,28 @@ final class GiftCardPaymentPartTest extends WebIntegrationTestCase
     }
 
     /**
+     * A card ticked, then expired before the order is placed: the placement refuses it, so the step
+     * keeps the way to take its part off, though the card is no longer one the buyer can tick.
+     */
+    public function testACardOnTheCartThatCanNoLongerBeSpentCanStillBeTakenOff(): void
+    {
+        [$cart, $customer] = $this->cartWorth100();
+        $giftCard = $this->giftCard(['amount' => '30', 'beneficiaryCustomerId' => $customer->getId()]);
+        $this->liveAction('toggle', ['giftCardId' => (int) $giftCard->getId()]);
+        $giftCard->setExpirationDate(new \DateTime('yesterday'))->save($this->getPropelConnection());
+
+        $component = $this->component();
+
+        self::assertCount(0, $component->filter('input[type=checkbox][data-live-gift-card-id-param]'), 'An expired card is not offered.');
+        self::assertCount(1, $component->filter('[data-live-action-param="remove"]'), 'The part it pays can still be taken off.');
+        self::assertCount(0, $component->filter('[data-live-action-param="spendAmount"]'), 'No amount can be spread over cards the buyer can no longer spend.');
+
+        $this->liveAction('remove', []);
+
+        self::assertSame([], $this->amountsOnCart($cart));
+    }
+
+    /**
      * The summary of the step listens to `syncSummary` and to the events of the cart, not to
      * PAYMENT_PARTS_CHANGED: without the first one it keeps showing the cards and the discount
      * of before the action.

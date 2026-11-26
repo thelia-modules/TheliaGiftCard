@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.6.2
+
+### Fixed
+
+- A card put on the cart, then expired, disabled or spent on another order before the order is placed, could no longer be taken off at the payment step: « Remove my gift cards from this order » read the spendable cards only, while the part stayed deducted and the placement refused the card. The button now shows whenever the cart holds an amount paid by card (#30), and the « Amount to use » field only while a card the buyer can still spend is on the cart. `GiftCardPaymentPartTest::testACardOnTheCartThatCanNoLongerBeSpentCanStillBeTakenOff` covers it.
+
 ## 3.6.1
 
 ### Fixed
